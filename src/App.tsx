@@ -256,7 +256,7 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
     <div className={dark ? "dark" : ""}>
       <div className="flex h-screen bg-background text-foreground overflow-hidden">
         {/* Desktop sidebar */}
-        <div className="sidebar-desktop">
+        <div className="sidebar-desktop shrink-0 h-full">
           <Sidebar dark={dark} setDark={setDark} view={view} navigate={(v: View, g?: string) => { navigate(v, g); setSidebarOpen(false); }} selectedGroup={selectedGroup} monthData={monthData} />
         </div>
         {/* Mobile sidebar overlay */}

@@ -16,7 +16,7 @@ export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthDat
   const inactiveClass = "text-white/50 hover:bg-white/5 hover:text-white/80";
 
   return (
-    <aside className="w-64 dataopp-sidebar flex flex-col shrink-0" style={{ borderRight: "1px solid rgba(255,255,255,0.08)" }}>
+    <aside className="w-64 h-full dataopp-sidebar flex flex-col shrink-0" style={{ borderRight: "1px solid rgba(255,255,255,0.08)" }}>
       {/* Logo */}
       <div className="p-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <div className="flex items-center gap-2.5">

@@ -29,7 +29,7 @@ export const ACCOUNTS: AccountConfig[] = [
 export const GROUP_ORDER = ["Ondoxa", "Liremia", "Groupe Umami / Seablue", "Groupe Wizorg", "Autres"];
 
 export const GROUP_COLORS: Record<string, string> = {
-  "Ondoxa": "#3b82f6",
+  "Ondoxa": "#EC5760",
   "Liremia": "#8b5cf6",
   "Groupe Umami / Seablue": "#06b6d4",
   "Groupe Wizorg": "#f59e0b",

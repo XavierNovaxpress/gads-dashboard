@@ -1,51 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 222 47% 11%;
+    --background: 220 20% 96%;
+    --foreground: 220 30% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 30% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 221 83% 53%;
+    --popover-foreground: 220 30% 15%;
+    --primary: 356 78% 63%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 220 30% 15%;
+    --muted: 220 16% 93%;
+    --muted-foreground: 220 10% 46%;
+    --accent: 220 20% 94%;
+    --accent-foreground: 220 30% 15%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --border: 220 16% 88%;
+    --input: 220 16% 88%;
+    --ring: 356 78% 63%;
     --radius: 0.75rem;
+    --dataopp-coral: #EC5760;
+    --dataopp-coral-dark: #D94550;
+    --dataopp-coral-light: #F2777E;
+    --dataopp-navy: #12213A;
+    --dataopp-navy-light: #1A2E4A;
+    --dataopp-navy-lighter: #243B5C;
   }
 
   .dark {
-    --background: 224 20% 4.5%;
-    --foreground: 210 40% 98%;
-    --card: 224 18% 7.5%;
-    --card-foreground: 210 40% 98%;
-    --popover: 224 18% 7.5%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
+    --background: 220 36% 12%;
+    --foreground: 220 20% 92%;
+    --card: 220 34% 14%;
+    --card-foreground: 220 20% 92%;
+    --popover: 220 34% 14%;
+    --popover-foreground: 220 20% 92%;
+    --primary: 356 78% 63%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 224 15% 12%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 224 15% 12%;
-    --muted-foreground: 215 20% 58%;
-    --accent: 224 15% 14%;
-    --accent-foreground: 210 40% 98%;
+    --secondary: 220 30% 18%;
+    --secondary-foreground: 220 20% 92%;
+    --muted: 220 28% 18%;
+    --muted-foreground: 220 14% 55%;
+    --accent: 220 28% 20%;
+    --accent-foreground: 220 20% 92%;
     --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 224 15% 16%;
-    --input: 224 15% 16%;
-    --ring: 217 91% 60%;
+    --destructive-foreground: 220 20% 92%;
+    --border: 220 28% 22%;
+    --input: 220 28% 22%;
+    --ring: 356 78% 63%;
   }
 }
 
@@ -55,12 +63,47 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-size: 14px;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* ===== DataOpp Branded Components ===== */
+
+.btn-coral {
+  background-color: var(--dataopp-coral);
+  color: #fff;
+  transition: all 0.2s ease;
+}
+.btn-coral:hover {
+  background-color: var(--dataopp-coral-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(236, 87, 96, 0.35);
+}
+.btn-coral:active {
+  background-color: #C73840;
+  transform: translateY(0);
+}
+.btn-coral:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.input-dataopp {
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  transition: all 0.2s ease;
+}
+.input-dataopp:focus {
+  outline: none;
+  border-color: var(--dataopp-coral);
+  box-shadow: 0 0 0 3px rgba(236, 87, 96, 0.15);
 }
 
 /* ===== Animations ===== */
@@ -105,6 +148,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes particle {
+  0%, 100% { opacity: 0.3; transform: translateY(0px); }
+  50% { opacity: 0.8; transform: translateY(-8px); }
+}
+
 /* Utility classes */
 .animate-fade-in-up { animation: fadeInUp 0.4s ease-out both; }
 .animate-fade-in { animation: fadeIn 0.3s ease-out both; }
@@ -139,10 +187,11 @@
 .card-hover:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -3px rgba(0, 0, 0, 0.04);
-  border-color: hsl(var(--ring) / 0.3);
+  border-color: rgba(236, 87, 96, 0.25);
 }
 .dark .card-hover:hover {
   box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3), 0 4px 10px -3px rgba(0, 0, 0, 0.2);
+  border-color: rgba(236, 87, 96, 0.3);
 }
 
 /* Table row hover */
@@ -160,6 +209,18 @@
   background: hsl(var(--card) / 0.85);
 }
 
+/* DataOpp Navy header */
+.dataopp-header {
+  background: var(--dataopp-navy);
+  color: #fff;
+}
+
+/* DataOpp sidebar */
+.dataopp-sidebar {
+  background: linear-gradient(180deg, var(--dataopp-navy) 0%, #0E1A2E 100%);
+  color: rgba(255, 255, 255, 0.85);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -171,7 +232,7 @@
 
 /* Progress bar shimmer */
 .progress-bar {
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #3b82f6);
+  background: linear-gradient(90deg, var(--dataopp-coral), var(--dataopp-coral-light), var(--dataopp-coral));
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }

@@ -78,7 +78,7 @@ export default function AdminPanel({ onBack }: Props) {
         </button>
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <Shield size={20} className="text-blue-600" /> Administration
+            <Shield size={20} className="text-[#EC5760]" /> Administration
           </h2>
           <p className="text-sm text-muted-foreground">G\u00e9rer les utilisateurs et les invitations</p>
         </div>
@@ -87,7 +87,7 @@ export default function AdminPanel({ onBack }: Props) {
       {/* Invite Form */}
       <div className="border border-border rounded-xl p-5 bg-card">
         <h3 className="font-semibold text-sm flex items-center gap-2 mb-4">
-          <UserPlus size={16} className="text-blue-600" /> Inviter un utilisateur
+          <UserPlus size={16} className="text-[#EC5760]" /> Inviter un utilisateur
         </h3>
 
         <form onSubmit={handleInvite} className="flex gap-2">
@@ -98,14 +98,14 @@ export default function AdminPanel({ onBack }: Props) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="email@exemple.com"
-              className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-[#EC5760]/30 transition"
               required
             />
           </div>
           <button
             type="submit"
             disabled={inviteLoading}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition disabled:opacity-50 whitespace-nowrap"
+            className="px-4 py-2 rounded-lg btn-coral text-white text-sm font-medium transition disabled:opacity-50 whitespace-nowrap"
           >
             {inviteLoading ? "..." : "Inviter"}
           </button>
@@ -143,7 +143,7 @@ export default function AdminPanel({ onBack }: Props) {
           {/* Users List */}
           <div className="border border-border rounded-xl p-5 bg-card">
             <h3 className="font-semibold text-sm flex items-center gap-2 mb-4">
-              <Users size={16} className="text-blue-600" /> Utilisateurs ({users.length})
+              <Users size={16} className="text-[#EC5760]" /> Utilisateurs ({users.length})
             </h3>
             <div className="space-y-2">
               {users.map((u) => (
@@ -153,7 +153,7 @@ export default function AdminPanel({ onBack }: Props) {
                     <span className="text-xs text-muted-foreground ml-2">{u.email}</span>
                   </div>
                   {u.is_admin && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 font-medium">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[#EC5760]/10 text-[#EC5760] font-medium">
                       Admin
                     </span>
                   )}
@@ -165,7 +165,7 @@ export default function AdminPanel({ onBack }: Props) {
           {/* Invitations List */}
           <div className="border border-border rounded-xl p-5 bg-card">
             <h3 className="font-semibold text-sm flex items-center gap-2 mb-4">
-              <Clock size={16} className="text-blue-600" /> Invitations ({invitations.length})
+              <Clock size={16} className="text-[#EC5760]" /> Invitations ({invitations.length})
             </h3>
             {invitations.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucune invitation envoy\u00e9e</p>

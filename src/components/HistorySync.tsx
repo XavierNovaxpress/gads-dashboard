@@ -96,8 +96,8 @@ export function HistorySync({ onComplete }: Props) {
     <div className="p-6 max-w-[800px] page-transition">
       <div className="animate-fade-in-up">
         <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 rounded-lg bg-blue-500/10">
-            <Download className="w-5 h-5 text-blue-500" />
+          <div className="p-2 rounded-lg bg-[#EC5760]/10">
+            <Download className="w-5 h-5 text-[#EC5760]" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight">Sync historique</h2>
         </div>
@@ -113,7 +113,7 @@ export function HistorySync({ onComplete }: Props) {
             <span className="text-sm font-medium text-foreground/80">12 derniers mois</span>
             <button
               onClick={selectAll}
-              className="text-xs text-blue-500 hover:text-blue-400 transition-colors font-medium"
+              className="text-xs text-[#EC5760] hover:text-[#F2777E] transition-colors font-medium"
             >
               {selected.size === allMonths.length ? "Tout désélectionner" : "Tout sélectionner"}
             </button>
@@ -128,13 +128,13 @@ export function HistorySync({ onComplete }: Props) {
                   onClick={() => toggleMonth(m.month)}
                   className={`relative p-3 rounded-xl border text-sm font-medium transition-all duration-200 text-left ${
                     isSelected
-                      ? "border-blue-500/50 bg-blue-500/10 text-blue-500"
+                      ? "border-[#EC5760]/50 bg-[#EC5760]/10 text-[#EC5760]"
                       : "border-border hover:border-ring/30 hover:bg-accent/50 text-muted-foreground"
                   }`}
                 >
                   {isSelected && (
                     <div className="absolute top-2 right-2">
-                      <Check className="w-3.5 h-3.5 text-blue-500" />
+                      <Check className="w-3.5 h-3.5 text-[#EC5760]" />
                     </div>
                   )}
                   <Calendar className="w-3.5 h-3.5 mb-1 opacity-50" />
@@ -149,7 +149,7 @@ export function HistorySync({ onComplete }: Props) {
             disabled={selected.size === 0}
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
               selected.size > 0
-                ? "bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                ? "bg-[#EC5760] hover:bg-[#D94550] text-white shadow-lg shadow-[#EC5760]/20"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             }`}
           >
@@ -167,7 +167,7 @@ export function HistorySync({ onComplete }: Props) {
             <div className="mb-4">
               <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-out"
+                  className="h-full bg-[#EC5760] rounded-full transition-all duration-500 ease-out"
                   style={{
                     width: `${((statuses.filter((s) => s.status === "done" || s.status === "error").length) / statuses.length) * 100}%`,
                   }}
@@ -190,16 +190,16 @@ export function HistorySync({ onComplete }: Props) {
                     : s.status === "error"
                     ? "border-red-500/20 bg-red-500/5"
                     : s.status === "syncing"
-                    ? "border-blue-500/20 bg-blue-500/5"
+                    ? "border-[#EC5760]/20 bg-[#EC5760]/5"
                     : "border-border"
                 }`}
               >
                 {s.status === "pending" && <div className="w-4 h-4 rounded-full border-2 border-muted-foreground/20" />}
-                {s.status === "syncing" && <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />}
+                {s.status === "syncing" && <Loader2 className="w-4 h-4 text-[#EC5760] animate-spin" />}
                 {s.status === "done" && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
                 {s.status === "error" && <AlertCircle className="w-4 h-4 text-red-500" />}
 
-                <span className={`flex-1 ${s.status === "syncing" ? "text-blue-500 font-medium" : s.status === "done" ? "text-foreground" : "text-muted-foreground"}`}>
+                <span className={`flex-1 ${s.status === "syncing" ? "text-[#EC5760] font-medium" : s.status === "done" ? "text-foreground" : "text-muted-foreground"}`}>
                   {s.label}
                 </span>
 
@@ -238,7 +238,7 @@ export function HistorySync({ onComplete }: Props) {
               </div>
               <button
                 onClick={onComplete}
-                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-medium text-sm transition-all duration-200 shadow-lg shadow-blue-500/20"
+                className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#EC5760] hover:bg-[#D94550] text-white font-medium text-sm transition-all duration-200 shadow-lg shadow-[#EC5760]/20"
               >
                 <Check className="w-4 h-4" />
                 Retour au dashboard

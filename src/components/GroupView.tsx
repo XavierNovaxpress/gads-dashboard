@@ -51,7 +51,7 @@ export function GroupView({ monthData, group, navigate, updateOpsCost }: Props) 
     stackedData.push(row);
   }
 
-  const STACK_COLORS = ["#3b82f6", "#8b5cf6", "#06b6d4", "#f59e0b", "#ef4444", "#10b981", "#ec4899"];
+  const STACK_COLORS = ["#EC5760", "#1A2E4A", "#D94550", "#243B5C", "#F2777E", "#0E1A2E", "#C73840"];
 
   const handleSaveOps = (label: string) => {
     const val = parseFloat(opsInput);

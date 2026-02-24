@@ -63,7 +63,7 @@ describe("KpiCard", () => {
 
   it("applies accent bar when provided", () => {
     const { container } = render(
-      <KpiCard title="Test" value="100" accent="#3b82f6" />
+      <KpiCard title="Test" value="100" accent="#EC5760" />
     );
     const bar = container.querySelector('[style*="background-color"]');
     expect(bar).toBeTruthy();

@@ -51,7 +51,7 @@ describe("GROUP_COLORS", () => {
   it("has a color for every group", () => {
     for (const group of GROUP_ORDER) {
       expect(GROUP_COLORS[group]).toBeDefined();
-      expect(GROUP_COLORS[group]).toMatch(/^#[0-9a-f]{6}$/);
+      expect(GROUP_COLORS[group]).toMatch(/^#[0-9a-fA-F]{6}$/);
     }
   });
 });

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Sun, Moon, ChevronRight, Zap, Download, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Sun, Moon, ChevronRight, TrendingUp, Download, BarChart3 } from "lucide-react";
 import { GROUP_ORDER, GROUP_COLORS } from "../lib/accounts";
 import { fmtEur, type MonthData } from "../lib/data";
 
@@ -12,18 +12,22 @@ interface Props {
 }
 
 export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthData }: Props) {
+  const activeClass = "bg-white/10 text-white font-medium shadow-sm";
+  const inactiveClass = "text-white/50 hover:bg-white/5 hover:text-white/80";
+
   return (
-    <aside className="w-64 border-r border-border bg-card flex flex-col shrink-0">
-      {/* Logo / title */}
-      <div className="p-5 border-b border-border">
+    <aside className="w-64 dataopp-sidebar flex flex-col shrink-0" style={{ borderRight: "1px solid rgba(255,255,255,0.08)" }}>
+      {/* Logo */}
+      <div className="p-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <Zap className="w-4 h-4 text-white" />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+               style={{ background: "linear-gradient(135deg, #EC5760 0%, #D94550 100%)", boxShadow: "0 4px 12px rgba(236,87,96,0.3)" }}>
+            <TrendingUp className="w-4.5 h-4.5 text-white" />
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-tight">Google Ads</h1>
-            <p className="text-[10px] text-muted-foreground font-medium">
-              {monthData.label || "Dashboard"}
+            <h1 className="text-base font-bold tracking-tight text-white">DataOpp</h1>
+            <p className="text-[10px] font-medium text-white/40">
+              {monthData.label || "Google Ads"}
             </p>
           </div>
         </div>
@@ -34,9 +38,7 @@ export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthDat
         <button
           onClick={() => navigate("dashboard")}
           className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-lg transition-all duration-200 ${
-            view === "dashboard"
-              ? "bg-accent text-accent-foreground font-medium shadow-sm"
-              : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+            view === "dashboard" ? activeClass : inactiveClass
           }`}
         >
           <LayoutDashboard className="w-4 h-4" />
@@ -46,21 +48,17 @@ export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthDat
         <button
           onClick={() => navigate("cumulative")}
           className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-lg transition-all duration-200 mt-0.5 ${
-            view === "cumulative"
-              ? "bg-accent text-accent-foreground font-medium shadow-sm"
-              : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+            view === "cumulative" ? activeClass : inactiveClass
           }`}
         >
           <BarChart3 className="w-4 h-4" />
-          Rapport cumulé
+          Rapport cumul&eacute;
         </button>
 
         <button
           onClick={() => navigate("historysync")}
           className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-lg transition-all duration-200 mt-0.5 ${
-            view === "historysync"
-              ? "bg-accent text-accent-foreground font-medium shadow-sm"
-              : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+            view === "historysync" ? activeClass : inactiveClass
           }`}
         >
           <Download className="w-4 h-4" />
@@ -68,7 +66,7 @@ export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthDat
         </button>
 
         <div className="px-3 pt-5 pb-2">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(236,87,96,0.6)" }}>
             Groupes
           </span>
         </div>
@@ -82,9 +80,7 @@ export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthDat
                 key={group}
                 onClick={() => navigate("group", group)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg transition-all duration-200 animate-fade-in-up group ${
-                  active
-                    ? "bg-accent text-accent-foreground font-medium shadow-sm"
-                    : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
+                  active ? activeClass : inactiveClass
                 }`}
                 style={{ animationDelay: `${i * 40}ms` }}
               >
@@ -94,7 +90,7 @@ export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthDat
                 />
                 <span className="flex-1 text-left truncate">{group}</span>
                 {gData && gData.spend > 0 && (
-                  <span className="text-[10px] tabular-nums font-medium opacity-60">
+                  <span className="text-[10px] tabular-nums font-medium opacity-50">
                     {fmtEur(gData.spend)}
                   </span>
                 )}
@@ -108,10 +104,10 @@ export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthDat
       </nav>
 
       {/* Theme toggle */}
-      <div className="border-t border-border p-3 px-4">
+      <div className="p-3 px-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
         <button
           onClick={() => setDark(!dark)}
-          className="flex items-center gap-2.5 text-sm text-muted-foreground hover:text-foreground transition-all duration-200 w-full px-1 py-1.5 rounded-lg hover:bg-accent/50"
+          className="flex items-center gap-2.5 text-sm text-white/40 hover:text-white/70 transition-all duration-200 w-full px-1 py-1.5 rounded-lg hover:bg-white/5"
         >
           <div className="relative w-4 h-4">
             <Sun className={`w-4 h-4 absolute inset-0 transition-all duration-300 ${dark ? "opacity-100 rotate-0" : "opacity-0 -rotate-90"}`} />

@@ -242,7 +242,7 @@ export function CumulativeReport({ navigate }: Props) {
               subtitle={`${processed.monthCount} mois — Moy. ${fmtEur(processed.avgMonthly)}/mois`}
               icon={<DollarSign className="w-4 h-4" />}
               delay={50}
-              accent="#3b82f6"
+              accent="#EC5760"
             />
             <KpiCard
               title="Frais de gestion"
@@ -309,7 +309,7 @@ export function CumulativeReport({ navigate }: Props) {
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Line yAxisId="left" type="monotone" dataKey="spend" name="Spend" stroke="#3b82f6" strokeWidth={2.5} dot={{ fill: "#3b82f6", r: 4, stroke: "#fff", strokeWidth: 2 }} />
+                  <Line yAxisId="left" type="monotone" dataKey="spend" name="Spend" stroke="#EC5760" strokeWidth={2.5} dot={{ fill: "#EC5760", r: 4, stroke: "#fff", strokeWidth: 2 }} />
                   <Line yAxisId="right" type="monotone" dataKey="clicks" name="Clicks" stroke="#10b981" strokeWidth={2} dot={{ fill: "#10b981", r: 3, stroke: "#fff", strokeWidth: 2 }} strokeDasharray="6 3" />
                 </LineChart>
               </ResponsiveContainer>

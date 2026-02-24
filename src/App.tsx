@@ -12,7 +12,7 @@ import { CumulativeReport } from "./components/CumulativeReport";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import AdminPanel from "./components/AdminPanel";
-import { Upload, RefreshCw, ChevronDown, Check, Loader2, CheckCircle2, AlertCircle, CloudDownload, Menu, X, LogOut, Shield } from "lucide-react";
+import { Upload, RefreshCw, ChevronDown, Check, Loader2, CheckCircle2, AlertCircle, CloudDownload, Menu, X, LogOut, Shield, TrendingUp } from "lucide-react";
 
 type View = "dashboard" | "group" | "account" | "historysync" | "cumulative" | "admin";
 
@@ -40,7 +40,7 @@ function Toast({ message, type }: { message: string; type: "success" | "error" |
   const colors = {
     success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
     error: "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
-    info: "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+    info: "border-[#EC5760]/30 bg-[#EC5760]/10 text-[#EC5760]",
   };
   const icons = {
     success: <CheckCircle2 className="w-3.5 h-3.5" />,
@@ -89,9 +89,9 @@ export default function App() {
   // Auth loading
   if (authLoading) {
     return (
-      <div className="dark">
-        <div className="min-h-screen flex items-center justify-center bg-background">
-          <Loader2 size={28} className="animate-spin text-blue-600" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(135deg, #12213A 0%, #0E1A2E 50%, #12213A 100%)" }}>
+        <div className="text-center">
+          <Loader2 size={28} className="animate-spin mx-auto" style={{ color: "#EC5760" }} />
         </div>
       </div>
     );
@@ -102,23 +102,17 @@ export default function App() {
     // Check if this is an invitation link
     if (inviteToken) {
       return (
-        <div className="dark">
-          <RegisterPage
-            token={inviteToken}
-            onSuccess={handleLoginSuccess}
-            onGoToLogin={() => {
-              window.history.replaceState({}, "", window.location.pathname);
-              window.location.reload();
-            }}
-          />
-        </div>
+        <RegisterPage
+          token={inviteToken}
+          onSuccess={handleLoginSuccess}
+          onGoToLogin={() => {
+            window.history.replaceState({}, "", window.location.pathname);
+            window.location.reload();
+          }}
+        />
       );
     }
-    return (
-      <div className="dark">
-        <LoginPage onSuccess={handleLoginSuccess} />
-      </div>
-    );
+    return <LoginPage onSuccess={handleLoginSuccess} />;
   }
 
   // Authenticated → Dashboard
@@ -304,7 +298,7 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
                         m === selectedMonth ? "text-foreground font-medium" : "text-muted-foreground"
                       }`}
                     >
-                      {m === selectedMonth && <Check className="w-3.5 h-3.5 text-blue-500" />}
+                      {m === selectedMonth && <Check className="w-3.5 h-3.5 text-[#EC5760]" />}
                       {m !== selectedMonth && <span className="w-3.5" />}
                       {formatMonth(m)}
                     </button>
@@ -322,7 +316,7 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
               disabled={refreshing}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${
                 refreshing
-                  ? "border-blue-500/30 bg-blue-500/10 text-blue-500"
+                  ? "border-[#EC5760]/30 bg-[#EC5760]/10 text-[#EC5760]"
                   : "border-border hover:bg-accent/50 hover:border-ring/30"
               } disabled:cursor-not-allowed`}
               title="Synchroniser depuis Windsor.ai"
@@ -348,7 +342,7 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
             {user.is_admin && (
               <button
                 onClick={() => setView("admin")}
-                className={`p-2 rounded-lg transition-colors ${view === "admin" ? "bg-blue-500/10 text-blue-600" : "hover:bg-accent/50 text-muted-foreground"}`}
+                className={`p-2 rounded-lg transition-colors ${view === "admin" ? "bg-[#EC5760]/10 text-[#EC5760]" : "hover:bg-accent/50 text-muted-foreground"}`}
                 title="Administration"
               >
                 <Shield className="w-4 h-4" />

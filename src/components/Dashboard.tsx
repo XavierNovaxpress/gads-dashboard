@@ -111,7 +111,7 @@ export function Dashboard({ monthData, prevMonthData, navigate }: Props) {
           icon={<DollarSign className="w-4 h-4" />}
           trend={spendDelta}
           delay={50}
-          accent="#3b82f6"
+          accent="#EC5760"
         />
         <KpiCard
           title="Frais de gestion"
@@ -120,7 +120,7 @@ export function Dashboard({ monthData, prevMonthData, navigate }: Props) {
           icon={<Receipt className="w-4 h-4" />}
           trend={feesDelta}
           delay={100}
-          accent="#8b5cf6"
+          accent="#1A2E4A"
         />
         <KpiCard
           title="Total à facturer"
@@ -129,7 +129,7 @@ export function Dashboard({ monthData, prevMonthData, navigate }: Props) {
           icon={<Target className="w-4 h-4" />}
           trend={invoiceDelta}
           delay={150}
-          accent="#06b6d4"
+          accent="#D94550"
         />
         <KpiCard
           title="Projection fin de mois"
@@ -138,7 +138,7 @@ export function Dashboard({ monthData, prevMonthData, navigate }: Props) {
           icon={<TrendingUp className="w-4 h-4" />}
           trend={projDelta}
           delay={200}
-          accent="#10b981"
+          accent="#243B5C"
         />
       </div>
 
@@ -151,8 +151,8 @@ export function Dashboard({ monthData, prevMonthData, navigate }: Props) {
             <AreaChart data={cumData}>
               <defs>
                 <linearGradient id="gradSpend" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#EC5760" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#EC5760" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
@@ -162,7 +162,7 @@ export function Dashboard({ monthData, prevMonthData, navigate }: Props) {
                 contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
                 formatter={(v: any) => [fmtEur(Number(v) || 0), "Cumulé"]}
               />
-              <Area type="monotone" dataKey="cumSpend" stroke="#3b82f6" fill="url(#gradSpend)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "#3b82f6", stroke: "#fff", strokeWidth: 2 }} />
+              <Area type="monotone" dataKey="cumSpend" stroke="#EC5760" fill="url(#gradSpend)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "#EC5760", stroke: "#fff", strokeWidth: 2 }} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -229,7 +229,7 @@ export function Dashboard({ monthData, prevMonthData, navigate }: Props) {
                 contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
                 formatter={(v: any) => [fmtEur(Number(v) || 0), "Spend"]}
               />
-              <Bar dataKey="spend" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="spend" fill="#EC5760" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -254,7 +254,7 @@ export function Dashboard({ monthData, prevMonthData, navigate }: Props) {
                 className={`text-xs p-2.5 rounded-lg border transition-colors ${
                   a.type === "warning"
                     ? "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10"
-                    : "border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10"
+                    : "border-[#12213A]/20 bg-[#12213A]/5 hover:bg-[#12213A]/10"
                 }`}
               >
                 <span className="font-semibold">{a.label}:</span> {a.msg}

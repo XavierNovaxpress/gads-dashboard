@@ -22,7 +22,7 @@ export function AccountDetail({ monthData, accountGname, navigate, opsCost, upda
   const acctConfig = getAccountByGname(accountGname);
   const label = acctConfig?.label ?? getLabel(accountGname);
   const group = acctConfig?.group ?? getGroup(accountGname);
-  const color = GROUP_COLORS[group] || "#3b82f6";
+  const color = GROUP_COLORS[group] || "#EC5760";
   const acctSummary = monthData.accounts.find((a) => a.gname === accountGname);
   const daily: DailyRow[] = monthData.dailyByAccount[accountGname] || [];
 
@@ -145,7 +145,7 @@ export function AccountDetail({ monthData, accountGname, navigate, opsCost, upda
       {/* Performance metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { title: "Clicks", value: fmtK(clicks), accent: "#3b82f6" },
+          { title: "Clicks", value: fmtK(clicks), accent: "#EC5760" },
           { title: "Impressions", value: fmtK(impressions), accent: "#8b5cf6" },
           { title: "CPC moyen", value: fmtEur(cpc), accent: "#f59e0b" },
           { title: "CTR", value: fmtPct(ctr), accent: "#06b6d4" },
@@ -204,7 +204,7 @@ export function AccountDetail({ monthData, accountGname, navigate, opsCost, upda
             <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
             <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 10, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Line yAxisId="left" type="monotone" dataKey="clicks" stroke="#3b82f6" strokeWidth={2} dot={false} name="Clicks" />
+            <Line yAxisId="left" type="monotone" dataKey="clicks" stroke="#EC5760" strokeWidth={2} dot={false} name="Clicks" />
             <Line yAxisId="right" type="monotone" dataKey="conversions" stroke="#10b981" strokeWidth={2} dot={false} name="Conversions" />
           </LineChart>
         </ResponsiveContainer>

@@ -1,0 +1,121 @@
+import { Router } from "express";
+import pool from "../db.js";
+
+export const refreshRouter = Router();
+
+interface WindsorRow {
+  date: string;
+  spend: number;
+  clicks: number;
+  impressions: number;
+  conversions: number;
+  average_cpc: number;
+  ctr: number;
+  account_name: string;
+}
+
+// POST /api/refresh?month=2026-02
+// Fetches data from Windsor.ai API and upserts into database
+refreshRouter.post("/", async (req, res) => {
+  try {
+    const apiKey = process.env.WINDSOR_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "WINDSOR_API_KEY not configured" });
+    }
+
+    // Determine date range
+    const now = new Date();
+    const monthParam = req.query.month as string;
+    let year: number, month: number;
+
+    if (monthParam) {
+      [year, month] = monthParam.split("-").map(Number);
+    } else {
+      year = now.getFullYear();
+      month = now.getMonth() + 1;
+    }
+
+    const dateFrom = `${year}-${String(month).padStart(2, "0")}-01`;
+    // Last day of month or today if current month
+    const lastDay = new Date(year, month, 0).getDate();
+    const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1;
+    const endDay = isCurrentMonth ? now.getDate() : lastDay;
+    const dateTo = `${year}-${String(month).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`;
+
+    console.log(`Refreshing data from Windsor.ai: ${dateFrom} to ${dateTo}`);
+
+    // Call Windsor.ai API
+    const windsorUrl = new URL("https://connectors.windsor.ai/google_ads");
+    windsorUrl.searchParams.set("api_key", apiKey);
+    windsorUrl.searchParams.set("date_from", dateFrom);
+    windsorUrl.searchParams.set("date_to", dateTo);
+    windsorUrl.searchParams.set("fields", "date,account_name,spend,clicks,impressions,conversions,average_cpc,ctr");
+
+    const windsorRes = await fetch(windsorUrl.toString());
+    if (!windsorRes.ok) {
+      const errText = await windsorRes.text();
+      console.error("Windsor API error:", errText);
+      return res.status(502).json({ error: "Windsor API error", details: errText });
+    }
+
+    const windsorData = await windsorRes.json();
+    const rows: WindsorRow[] = windsorData.data || [];
+
+    if (rows.length === 0) {
+      return res.json({ success: true, message: "No data returned from Windsor", upserted: 0 });
+    }
+
+    // Filter out rows with no account_name or no spend
+    const validRows = rows.filter(
+      (r) => r.account_name && r.date && r.spend !== undefined
+    );
+
+    // Upsert into database
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      let upserted = 0;
+      for (const row of validRows) {
+        await client.query(
+          `INSERT INTO daily_data (date, account_name, spend, clicks, impressions, conversions, average_cpc, ctr)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (date, account_name) DO UPDATE SET
+             spend = EXCLUDED.spend,
+             clicks = EXCLUDED.clicks,
+             impressions = EXCLUDED.impressions,
+             conversions = EXCLUDED.conversions,
+             average_cpc = EXCLUDED.average_cpc,
+             ctr = EXCLUDED.ctr`,
+          [
+            row.date,
+            row.account_name,
+            row.spend || 0,
+            row.clicks || 0,
+            row.impressions || 0,
+            row.conversions || 0,
+            row.average_cpc || 0,
+            row.ctr || 0,
+          ]
+        );
+        upserted++;
+      }
+      await client.query("COMMIT");
+
+      console.log(`Windsor refresh complete: ${upserted} rows upserted for ${dateFrom} to ${dateTo}`);
+      res.json({
+        success: true,
+        upserted,
+        dateRange: { from: dateFrom, to: dateTo },
+        accounts: [...new Set(validRows.map((r) => r.account_name))].length,
+      });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error("POST /api/refresh error:", err);
+    res.status(500).json({ error: "Failed to refresh data from Windsor" });
+  }
+});

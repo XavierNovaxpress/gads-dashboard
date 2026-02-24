@@ -1,39 +1,155 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { buildMonthData, type MonthData } from "./lib/data";
-import { type RawRow, fetchMonthData, fetchAvailableMonths, fetchOpsCosts, updateOpsCostApi, uploadFile } from "./lib/api";
+import { type RawRow, fetchMonthData, fetchAvailableMonths, fetchOpsCosts, updateOpsCostApi, uploadFile, refreshFromWindsor } from "./lib/api";
+import { getCurrentUser, logout, type User } from "./lib/auth";
 import { GROUP_ORDER } from "./lib/accounts";
 import { Sidebar } from "./components/Sidebar";
 import { Dashboard } from "./components/Dashboard";
 import { GroupView } from "./components/GroupView";
 import { AccountDetail } from "./components/AccountDetail";
-import { Upload, RefreshCw, ChevronDown, Check, Loader2 } from "lucide-react";
+import { HistorySync } from "./components/HistorySync";
+import { CumulativeReport } from "./components/CumulativeReport";
+import LoginPage from "./components/LoginPage";
+import RegisterPage from "./components/RegisterPage";
+import AdminPanel from "./components/AdminPanel";
+import { Upload, RefreshCw, ChevronDown, Check, Loader2, CheckCircle2, AlertCircle, CloudDownload, Menu, X, LogOut, Shield } from "lucide-react";
 
-type View = "dashboard" | "group" | "account";
+type View = "dashboard" | "group" | "account" | "historysync" | "cumulative" | "admin";
+
+function SkeletonLoader() {
+  return (
+    <div className="p-6 space-y-6 max-w-[1400px] animate-fade-in">
+      <div className="space-y-2">
+        <div className="skeleton h-7 w-48" />
+        <div className="skeleton h-4 w-32" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="skeleton h-28 rounded-xl" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 skeleton h-72 rounded-xl" />
+        <div className="skeleton h-72 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+function Toast({ message, type }: { message: string; type: "success" | "error" | "info" }) {
+  const colors = {
+    success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    error: "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
+    info: "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  };
+  const icons = {
+    success: <CheckCircle2 className="w-3.5 h-3.5" />,
+    error: <AlertCircle className="w-3.5 h-3.5" />,
+    info: <CloudDownload className="w-3.5 h-3.5" />,
+  };
+  return (
+    <div className={`animate-toast flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium ${colors[type]}`}>
+      {icons[type]}
+      {message}
+    </div>
+  );
+}
+
+// ─── Auth wrapper ──────────────────────────────────────────────────────────────
+function getInviteToken(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("invite");
+}
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [inviteToken] = useState<string | null>(getInviteToken);
+
+  // Check auth on mount
+  useEffect(() => {
+    getCurrentUser()
+      .then((u) => setUser(u))
+      .finally(() => setAuthLoading(false));
+  }, []);
+
+  const handleLoginSuccess = (u: User) => {
+    setUser(u);
+    // Clear invite param from URL
+    if (window.location.search) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setUser(null);
+  };
+
+  // Auth loading
+  if (authLoading) {
+    return (
+      <div className="dark">
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 size={28} className="animate-spin text-blue-600" />
+        </div>
+      </div>
+    );
+  }
+
+  // Not authenticated
+  if (!user) {
+    // Check if this is an invitation link
+    if (inviteToken) {
+      return (
+        <div className="dark">
+          <RegisterPage
+            token={inviteToken}
+            onSuccess={handleLoginSuccess}
+            onGoToLogin={() => {
+              window.history.replaceState({}, "", window.location.pathname);
+              window.location.reload();
+            }}
+          />
+        </div>
+      );
+    }
+    return (
+      <div className="dark">
+        <LoginPage onSuccess={handleLoginSuccess} />
+      </div>
+    );
+  }
+
+  // Authenticated → Dashboard
+  return <AuthenticatedApp user={user} onLogout={handleLogout} />;
+}
+
+// ─── Main authenticated app ───────────────────────────────────────────────────
+function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [dark, setDark] = useState(true);
   const [view, setView] = useState<View>("dashboard");
   const [selectedGroup, setSelectedGroup] = useState<string>(GROUP_ORDER[0]);
   const [selectedAccount, setSelectedAccount] = useState<string>("");
   const [opsCosts, setOpsCosts] = useState<Record<string, number>>({});
 
-  // API state
   const [rawData, setRawData] = useState<RawRow[]>([]);
+  const [prevRawData, setPrevRawData] = useState<RawRow[]>([]);
   const [months, setMonths] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshStatus, setRefreshStatus] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Load months on mount
   useEffect(() => {
     fetchAvailableMonths()
       .then((m) => {
         setMonths(m);
-        if (m.length > 0 && !selectedMonth) {
-          setSelectedMonth(m[0]); // most recent
-        }
+        if (m.length > 0 && !selectedMonth) setSelectedMonth(m[0]);
         if (m.length === 0) setLoading(false);
       })
       .catch((err) => {
@@ -43,28 +159,44 @@ export default function App() {
       });
   }, []);
 
-  // Load data when month changes
+  const prevMonth = useMemo(() => {
+    if (!selectedMonth) return "";
+    const [y, m] = selectedMonth.split("-").map(Number);
+    const pm = m === 1 ? 12 : m - 1;
+    const py = m === 1 ? y - 1 : y;
+    return `${py}-${String(pm).padStart(2, "0")}`;
+  }, [selectedMonth]);
+
   useEffect(() => {
     if (!selectedMonth) return;
     setLoading(true);
     setError(null);
-    Promise.all([fetchMonthData(selectedMonth), fetchOpsCosts(selectedMonth)])
-      .then(([data, costs]) => {
+    const fetches: Promise<any>[] = [
+      fetchMonthData(selectedMonth),
+      fetchOpsCosts(selectedMonth),
+    ];
+    if (prevMonth) {
+      fetches.push(fetchMonthData(prevMonth).catch(() => [] as RawRow[]));
+    }
+    Promise.all(fetches)
+      .then(([data, costs, prevData]) => {
         setRawData(data);
         setOpsCosts(costs);
+        setPrevRawData(prevData || []);
         setLoading(false);
       })
       .catch((err) => {
-        setError("Erreur lors du chargement des données");
+        setError("Erreur lors du chargement des donn\u00e9es");
         setLoading(false);
         console.error(err);
       });
-  }, [selectedMonth]);
+  }, [selectedMonth, prevMonth]);
 
-  const monthData: MonthData = useMemo(
-    () => buildMonthData(rawData, opsCosts),
-    [rawData, opsCosts]
-  );
+  const monthData: MonthData = useMemo(() => buildMonthData(rawData, opsCosts), [rawData, opsCosts]);
+  const prevMonthData: MonthData | null = useMemo(() => {
+    if (prevRawData.length === 0) return null;
+    return buildMonthData(prevRawData, {});
+  }, [prevRawData]);
 
   const navigate = useCallback((v: View, group?: string, account?: string) => {
     setView(v);
@@ -72,55 +204,53 @@ export default function App() {
     if (account) setSelectedAccount(account);
   }, []);
 
-  const updateOpsCost = useCallback(
-    (label: string, cost: number) => {
-      setOpsCosts((prev) => ({ ...prev, [label]: cost }));
-      // Persist to API
-      if (selectedMonth) {
-        updateOpsCostApi(label, selectedMonth, cost).catch(console.error);
-      }
-    },
-    [selectedMonth]
-  );
+  const updateOpsCost = useCallback((label: string, cost: number) => {
+    setOpsCosts((prev) => ({ ...prev, [label]: cost }));
+    if (selectedMonth) updateOpsCostApi(label, selectedMonth, cost).catch(console.error);
+  }, [selectedMonth]);
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadStatus("Upload en cours...");
+    setUploadStatus({ msg: "Upload en cours...", type: "info" });
     try {
       const result = await uploadFile(file);
-      setUploadStatus(`${result.message}`);
-      // Reload months and data
+      setUploadStatus({ msg: result.message, type: "success" });
       const m = await fetchAvailableMonths();
       setMonths(m);
-      if (m.length > 0) {
-        setSelectedMonth(m[0]);
-      }
+      if (m.length > 0) setSelectedMonth(m[0]);
       setTimeout(() => setUploadStatus(null), 3000);
     } catch (err) {
-      setUploadStatus("Erreur: " + (err instanceof Error ? err.message : "Upload failed"));
+      setUploadStatus({ msg: "Erreur: " + (err instanceof Error ? err.message : "Upload failed"), type: "error" });
       setTimeout(() => setUploadStatus(null), 5000);
     }
     e.target.value = "";
   }, []);
 
-  const handleRefresh = useCallback(() => {
-    if (selectedMonth) {
-      setLoading(true);
-      Promise.all([fetchMonthData(selectedMonth), fetchOpsCosts(selectedMonth)])
-        .then(([data, costs]) => {
-          setRawData(data);
-          setOpsCosts(costs);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
+  const handleRefresh = useCallback(async () => {
+    if (!selectedMonth) return;
+    setRefreshing(true);
+    setRefreshStatus(null);
+    try {
+      const result = await refreshFromWindsor(selectedMonth);
+      setRefreshStatus({ msg: `${result.upserted} lignes synchronis\u00e9es`, type: "success" });
+      const [data, costs] = await Promise.all([fetchMonthData(selectedMonth), fetchOpsCosts(selectedMonth)]);
+      setRawData(data);
+      setOpsCosts(costs);
+      const m = await fetchAvailableMonths();
+      setMonths(m);
+    } catch (err) {
+      setRefreshStatus({ msg: "Erreur: " + (err instanceof Error ? err.message : "Sync failed"), type: "error" });
+    } finally {
+      setRefreshing(false);
+      setTimeout(() => setRefreshStatus(null), 4000);
     }
   }, [selectedMonth]);
 
   const MONTH_NAMES: Record<string, string> = {
-    "01": "Janvier", "02": "Février", "03": "Mars", "04": "Avril",
-    "05": "Mai", "06": "Juin", "07": "Juillet", "08": "Août",
-    "09": "Septembre", "10": "Octobre", "11": "Novembre", "12": "Décembre",
+    "01": "Janvier", "02": "F\u00e9vrier", "03": "Mars", "04": "Avril",
+    "05": "Mai", "06": "Juin", "07": "Juillet", "08": "Ao\u00fbt",
+    "09": "Septembre", "10": "Octobre", "11": "Novembre", "12": "D\u00e9cembre",
   };
 
   const formatMonth = (m: string) => {
@@ -131,124 +261,167 @@ export default function App() {
   return (
     <div className={dark ? "dark" : ""}>
       <div className="flex h-screen bg-background text-foreground overflow-hidden">
-        <Sidebar
-          dark={dark}
-          setDark={setDark}
-          view={view}
-          navigate={navigate}
-          selectedGroup={selectedGroup}
-          monthData={monthData}
-        />
+        {/* Desktop sidebar */}
+        <div className="sidebar-desktop">
+          <Sidebar dark={dark} setDark={setDark} view={view} navigate={(v: View, g?: string) => { navigate(v, g); setSidebarOpen(false); }} selectedGroup={selectedGroup} monthData={monthData} />
+        </div>
+        {/* Mobile sidebar overlay */}
+        {sidebarOpen && (
+          <>
+            <div className="sidebar-mobile-overlay" onClick={() => setSidebarOpen(false)} />
+            <div className="sidebar-mobile">
+              <Sidebar dark={dark} setDark={setDark} view={view} navigate={(v: View, g?: string) => { navigate(v, g); setSidebarOpen(false); }} selectedGroup={selectedGroup} monthData={monthData} />
+            </div>
+          </>
+        )}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Top bar with month selector + upload */}
-          <header className="border-b border-border bg-card px-6 py-3 flex items-center gap-3 shrink-0">
+          {/* Top bar */}
+          <header className="border-b border-border glass-header px-4 sm:px-6 py-3 flex items-center gap-2 sm:gap-3 shrink-0 z-20">
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="mobile-menu-btn p-2 rounded-lg hover:bg-accent/50 transition-colors"
+            >
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+
             {/* Month selector */}
             <div className="relative">
               <button
                 onClick={() => setShowMonthPicker(!showMonthPicker)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border hover:bg-accent/50 text-sm transition-colors"
+                className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-border hover:bg-accent/50 text-sm font-medium transition-all duration-200 hover:border-ring/30"
               >
-                {selectedMonth ? formatMonth(selectedMonth) : "Sélectionner un mois"}
-                <ChevronDown className="w-3.5 h-3.5" />
+                {selectedMonth ? formatMonth(selectedMonth) : "S\u00e9lectionner un mois"}
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showMonthPicker ? "rotate-180" : ""}`} />
               </button>
               {showMonthPicker && (
-                <div className="absolute top-full mt-1 left-0 bg-card border border-border rounded-md shadow-lg z-50 min-w-[180px] py-1">
+                <div className="absolute top-full mt-1.5 left-0 bg-card border border-border rounded-xl shadow-xl z-50 min-w-[200px] py-1.5 animate-slide-down">
                   {months.map((m) => (
                     <button
                       key={m}
-                      onClick={() => {
-                        setSelectedMonth(m);
-                        setShowMonthPicker(false);
-                      }}
-                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-accent/50 flex items-center gap-2 ${
+                      onClick={() => { setSelectedMonth(m); setShowMonthPicker(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-accent/50 flex items-center gap-2.5 transition-colors ${
                         m === selectedMonth ? "text-foreground font-medium" : "text-muted-foreground"
                       }`}
                     >
-                      {m === selectedMonth && <Check className="w-3 h-3" />}
+                      {m === selectedMonth && <Check className="w-3.5 h-3.5 text-blue-500" />}
+                      {m !== selectedMonth && <span className="w-3.5" />}
                       {formatMonth(m)}
                     </button>
                   ))}
                   {months.length === 0 && (
-                    <div className="px-3 py-2 text-xs text-muted-foreground">Aucun mois disponible</div>
+                    <div className="px-4 py-3 text-xs text-muted-foreground">Aucun mois disponible</div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Refresh */}
+            {/* Sync Windsor */}
             <button
               onClick={handleRefresh}
-              className="p-1.5 rounded hover:bg-accent/50 text-muted-foreground hover:text-foreground transition-colors"
-              title="Rafraîchir"
+              disabled={refreshing}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${
+                refreshing
+                  ? "border-blue-500/30 bg-blue-500/10 text-blue-500"
+                  : "border-border hover:bg-accent/50 hover:border-ring/30"
+              } disabled:cursor-not-allowed`}
+              title="Synchroniser depuis Windsor.ai"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">{refreshing ? "Synchronisation..." : "Sync Windsor"}</span>
             </button>
+
+            {/* Status toasts */}
+            {refreshStatus && <Toast message={refreshStatus.msg} type={refreshStatus.type} />}
+            {uploadStatus && <Toast message={uploadStatus.msg} type={uploadStatus.type} />}
 
             <div className="flex-1" />
 
             {/* Upload */}
-            <label className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border hover:bg-accent/50 text-sm cursor-pointer transition-colors">
+            <label className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-border hover:bg-accent/50 text-sm font-medium cursor-pointer transition-all duration-200 hover:border-ring/30">
               <Upload className="w-4 h-4" />
-              Importer JSON
+              <span className="hidden sm:inline">Importer JSON</span>
               <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
             </label>
 
-            {/* Upload status */}
-            {uploadStatus && (
-              <span className="text-xs text-muted-foreground">{uploadStatus}</span>
+            {/* Admin button */}
+            {user.is_admin && (
+              <button
+                onClick={() => setView("admin")}
+                className={`p-2 rounded-lg transition-colors ${view === "admin" ? "bg-blue-500/10 text-blue-600" : "hover:bg-accent/50 text-muted-foreground"}`}
+                title="Administration"
+              >
+                <Shield className="w-4 h-4" />
+              </button>
             )}
+
+            {/* User + Logout */}
+            <div className="flex items-center gap-2 pl-2 border-l border-border">
+              <span className="text-xs text-muted-foreground hidden sm:inline">{user.name}</span>
+              <button
+                onClick={onLogout}
+                className="p-2 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-colors"
+                title="D\u00e9connexion"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </header>
+
+          {/* Progress bar during sync */}
+          {refreshing && (
+            <div className="h-0.5 w-full progress-bar" />
+          )}
 
           {/* Main content */}
           <main className="flex-1 overflow-y-auto">
-            {loading && (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            {view === "admin" && user.is_admin && (
+              <div className="p-6 max-w-[800px]">
+                <AdminPanel onBack={() => setView("dashboard")} />
               </div>
             )}
-            {error && (
-              <div className="flex items-center justify-center h-64">
+            {loading && view !== "historysync" && view !== "cumulative" && view !== "admin" && <SkeletonLoader />}
+            {error && view !== "historysync" && view !== "cumulative" && view !== "admin" && (
+              <div className="flex items-center justify-center h-64 animate-fade-in">
                 <div className="text-center">
-                  <p className="text-red-500 mb-2">{error}</p>
+                  <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-3">
+                    <AlertCircle className="w-6 h-6 text-red-500" />
+                  </div>
+                  <p className="text-red-500 font-medium mb-1">{error}</p>
+                  <p className="text-sm text-muted-foreground">Importez un fichier JSON pour commencer.</p>
+                </div>
+              </div>
+            )}
+            {!loading && !error && rawData.length === 0 && view !== "historysync" && view !== "cumulative" && view !== "admin" && (
+              <div className="flex items-center justify-center h-64 animate-fade-in">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                    <Upload className="w-8 h-8 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-lg font-semibold mb-1">Aucune donn\u00e9e</p>
                   <p className="text-sm text-muted-foreground">
-                    Importez un fichier JSON pour commencer.
+                    Importez un fichier JSON ou cliquez sur "Sync Windsor" pour commencer.
                   </p>
                 </div>
               </div>
             )}
-            {!loading && !error && rawData.length === 0 && (
-              <div className="flex items-center justify-center h-64">
-                <div className="text-center">
-                  <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-lg font-medium mb-1">Aucune donnée</p>
-                  <p className="text-sm text-muted-foreground">
-                    Importez un fichier JSON (mtd.json) ou envoyez les données via l'API.
-                  </p>
-                </div>
-              </div>
+            {view === "historysync" && (
+              <HistorySync onComplete={() => {
+                setView("dashboard");
+                fetchAvailableMonths().then((m) => {
+                  setMonths(m);
+                  if (m.length > 0) setSelectedMonth(m[0]);
+                });
+              }} />
             )}
-            {!loading && !error && rawData.length > 0 && (
+            {view === "cumulative" && (
+              <CumulativeReport navigate={navigate} />
+            )}
+            {!loading && !error && rawData.length > 0 && view !== "historysync" && view !== "cumulative" && view !== "admin" && (
               <>
-                {view === "dashboard" && (
-                  <Dashboard monthData={monthData} navigate={navigate} />
-                )}
-                {view === "group" && (
-                  <GroupView
-                    monthData={monthData}
-                    group={selectedGroup}
-                    navigate={navigate}
-                    updateOpsCost={updateOpsCost}
-                  />
-                )}
-                {view === "account" && (
-                  <AccountDetail
-                    monthData={monthData}
-                    accountGname={selectedAccount}
-                    navigate={navigate}
-                    opsCost={opsCosts}
-                    updateOpsCost={updateOpsCost}
-                  />
-                )}
+                {view === "dashboard" && <Dashboard monthData={monthData} prevMonthData={prevMonthData} navigate={navigate} />}
+                {view === "group" && <GroupView monthData={monthData} group={selectedGroup} navigate={navigate} updateOpsCost={updateOpsCost} />}
+                {view === "account" && <AccountDetail monthData={monthData} accountGname={selectedAccount} navigate={navigate} opsCost={opsCosts} updateOpsCost={updateOpsCost} />}
               </>
             )}
           </main>

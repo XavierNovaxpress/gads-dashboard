@@ -44,6 +44,45 @@ dataRouter.get("/months", async (_req, res) => {
   }
 });
 
+// GET /api/data/range?from=2024-06&to=2026-02
+// Returns monthly aggregates for a date range
+dataRouter.get("/range", async (req, res) => {
+  try {
+    const from = req.query.from as string;
+    const to = req.query.to as string;
+    if (!from || !to) {
+      return res.status(400).json({ error: "from and to query params required (YYYY-MM)" });
+    }
+
+    const [fy, fm] = from.split("-").map(Number);
+    const [ty, tm] = to.split("-").map(Number);
+    const startDate = `${fy}-${String(fm).padStart(2, "0")}-01`;
+    // End is first day of month after "to"
+    const endMonth = tm === 12 ? 1 : tm + 1;
+    const endYear = tm === 12 ? ty + 1 : ty;
+    const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
+
+    const result = await pool.query(
+      `SELECT TO_CHAR(date, 'YYYY-MM') as month,
+              account_name,
+              SUM(spend)::float as spend,
+              SUM(clicks)::int as clicks,
+              SUM(impressions)::int as impressions,
+              SUM(conversions)::float as conversions
+       FROM daily_data
+       WHERE date >= $1 AND date < $2
+       GROUP BY month, account_name
+       ORDER BY month, account_name`,
+      [startDate, endDate]
+    );
+
+    res.json({ from, to, rows: result.rows, count: result.rowCount });
+  } catch (err) {
+    console.error("GET /api/data/range error:", err);
+    res.status(500).json({ error: "Failed to fetch range data" });
+  }
+});
+
 // POST /api/data
 // Bulk upsert daily data rows
 dataRouter.post("/", async (req, res) => {

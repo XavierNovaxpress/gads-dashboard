@@ -27,8 +27,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server ./server
 COPY --from=builder /app/dist-server ./dist-server
 
-# Copy data folder
-COPY data/ ./data/
+# Create data folder (populated at runtime via Windsor.ai or upload)
+RUN mkdir -p ./data
 
 ENV NODE_ENV=production
 ENV PORT=3001

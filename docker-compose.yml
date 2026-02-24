@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,6 +23,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/gads_dashboard
       NODE_ENV: production
       PORT: "3001"
+      WINDSOR_API_KEY: ea43e1a5d1e51470263b7e9cdb0827136aa8
     depends_on:
       db:
         condition: service_healthy

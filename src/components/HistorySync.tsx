@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { RefreshCw, Check, X, Calendar, Download, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { refreshFromWindsor } from "../lib/api";
+import { MONTH_NAMES_FULL } from "../lib/data";
 
 interface Props {
   onComplete: () => void;
@@ -14,12 +15,6 @@ interface MonthStatus {
   error?: string;
 }
 
-const MONTH_NAMES: Record<string, string> = {
-  "01": "Janvier", "02": "Février", "03": "Mars", "04": "Avril",
-  "05": "Mai", "06": "Juin", "07": "Juillet", "08": "Août",
-  "09": "Septembre", "10": "Octobre", "11": "Novembre", "12": "Décembre",
-};
-
 function generateMonthsList(): { month: string; label: string }[] {
   const now = new Date();
   const months: { month: string; label: string }[] = [];
@@ -28,7 +23,7 @@ function generateMonthsList(): { month: string; label: string }[] {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const key = `${y}-${m}`;
-    months.push({ month: key, label: `${MONTH_NAMES[m]} ${y}` });
+    months.push({ month: key, label: `${MONTH_NAMES_FULL[m]} ${y}` });
   }
   return months;
 }

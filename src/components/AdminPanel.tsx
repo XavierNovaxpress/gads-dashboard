@@ -52,9 +52,21 @@ export default function AdminPanel({ onBack }: Props) {
   };
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(inviteUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback: select the text for manual copy
+      const el = document.querySelector<HTMLElement>(".invite-url-code");
+      if (el) {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    }
   };
 
   const invStatus = (inv: Invitation) => {

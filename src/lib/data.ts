@@ -62,6 +62,28 @@ const MONTH_NAMES_FR = [
   "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
 ];
 
+export const MONTH_NAMES_FULL: Record<string, string> = {
+  "01": "Janvier", "02": "Février", "03": "Mars", "04": "Avril",
+  "05": "Mai", "06": "Juin", "07": "Juillet", "08": "Août",
+  "09": "Septembre", "10": "Octobre", "11": "Novembre", "12": "Décembre",
+};
+
+export const MONTH_NAMES_SHORT: Record<string, string> = {
+  "01": "Jan", "02": "Fév", "03": "Mar", "04": "Avr",
+  "05": "Mai", "06": "Jun", "07": "Jul", "08": "Aoû",
+  "09": "Sep", "10": "Oct", "11": "Nov", "12": "Déc",
+};
+
+export function formatMonth(m: string): string {
+  const [y, mo] = m.split("-");
+  return `${MONTH_NAMES_FULL[mo] || mo} ${y}`;
+}
+
+export function shortMonth(m: string): string {
+  const [y, mo] = m.split("-");
+  return `${MONTH_NAMES_SHORT[mo] || mo} ${y.slice(2)}`;
+}
+
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
@@ -246,17 +268,3 @@ export function fmtEur(n: number): string {
   return fmt(n, 2) + " €";
 }
 
-export function deltaClass(current: number, previous: number): string {
-  if (previous === 0) return "text-muted-foreground";
-  const pct = ((current - previous) / previous) * 100;
-  if (pct > 5) return "text-emerald-500";
-  if (pct < -5) return "text-red-500";
-  return "text-muted-foreground";
-}
-
-export function deltaPct(current: number, previous: number): string {
-  if (previous === 0) return "N/A";
-  const pct = ((current - previous) / previous) * 100;
-  const sign = pct >= 0 ? "+" : "";
-  return `${sign}${pct.toFixed(1)}%`;
-}

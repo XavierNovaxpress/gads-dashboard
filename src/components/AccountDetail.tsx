@@ -65,6 +65,7 @@ export function AccountDetail({ monthData, accountGname, navigate, opsCost, upda
         <button
           onClick={() => navigate("group", group)}
           className="p-2 rounded-lg hover:bg-accent/50 transition-all duration-200 hover:scale-105 active:scale-95"
+          aria-label="Retour au groupe"
         >
           <ArrowLeft className="w-4 h-4" />
         </button>

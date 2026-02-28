@@ -34,7 +34,11 @@ export async function login(email: string, password: string): Promise<{ success:
 }
 
 export async function logout(): Promise<void> {
-  await fetch(`${BASE}/logout`, { method: "POST", credentials: "include" });
+  try {
+    await fetch(`${BASE}/logout`, { method: "POST", credentials: "include" });
+  } catch {
+    // Ignore network errors — caller will clear local state regardless
+  }
 }
 
 export async function getCurrentUser(): Promise<User | null> {

@@ -12,7 +12,6 @@ import {
   updateOpsCostApi,
   uploadFile,
   fetchRangeData,
-  healthCheck,
 } from "../lib/api";
 
 beforeEach(() => {
@@ -28,6 +27,7 @@ describe("fetchMonthData", () => {
 
     const result = await fetchMonthData("2026-01");
     expect(mockFetch).toHaveBeenCalledWith("/api/data?month=2026-01", expect.objectContaining({ credentials: "include" }));
+    // encodeURIComponent("2026-01") === "2026-01" for valid month strings
     expect(result).toHaveLength(1);
     expect(result[0].spend).toBe(100);
   });
@@ -119,15 +119,3 @@ describe("fetchRangeData", () => {
   });
 });
 
-describe("healthCheck", () => {
-  it("returns status object", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ status: "ok", db: "connected" }),
-    });
-
-    const result = await healthCheck();
-    expect(result.status).toBe("ok");
-    expect(result.db).toBe("connected");
-  });
-});

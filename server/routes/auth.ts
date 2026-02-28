@@ -10,14 +10,18 @@ import {
   clearAuthCookie,
   type AuthUser,
 } from "../middleware/auth.js";
+import { rateLimit } from "../middleware/rateLimit.js";
 
 export const authRouter = Router();
 
 const INVITATION_EXPIRY_HOURS = 48;
 const BCRYPT_ROUNDS = 12;
 
+// Rate limit: 10 attempts per 15 minutes on auth endpoints
+const authRateLimit = rateLimit(10, 15 * 60 * 1000);
+
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", authRateLimit, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -88,7 +92,7 @@ authRouter.get("/verify-invitation/:token", async (req, res) => {
 });
 
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
-authRouter.post("/register", async (req, res) => {
+authRouter.post("/register", authRateLimit, async (req, res) => {
   const client = await pool.connect();
   try {
     const { token, name, password } = req.body;
@@ -192,7 +196,7 @@ authRouter.post("/invite", authMiddleware, adminOnly, async (req, res) => {
     );
 
     // Build invitation URL
-    const baseUrl = process.env.FRONTEND_URL || req.headers.origin || "http://localhost:5173";
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const invitationUrl = `${baseUrl}?invite=${token}`;
 
     res.json({

@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import pool from "../db.js";
 
 export interface AuthUser {
   id: number;
@@ -17,7 +18,12 @@ declare global {
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-in-production";
+if (!process.env.JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET environment variable is required.");
+  process.exit(1);
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRY = "7d";
 
 export function generateJWT(user: AuthUser): string {
@@ -58,9 +64,22 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
   }
 }
 
-export function adminOnly(req: Request, res: Response, next: NextFunction) {
-  if (!req.user?.is_admin) {
-    return res.status(403).json({ error: "Admin access required" });
+export async function adminOnly(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ error: "Authentication required" });
   }
-  next();
+
+  try {
+    const result = await pool.query(
+      "SELECT is_admin FROM users WHERE id = $1",
+      [req.user.id]
+    );
+    if (result.rows.length === 0 || !result.rows[0].is_admin) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    next();
+  } catch (err) {
+    console.error("adminOnly check failed:", err);
+    return res.status(500).json({ error: "Authorization check failed" });
+  }
 }

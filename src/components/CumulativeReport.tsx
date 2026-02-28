@@ -5,23 +5,12 @@ import {
 } from "recharts";
 import { BarChart3, TrendingUp, DollarSign, Target, Calendar, Loader2, ArrowRight } from "lucide-react";
 import { KpiCard } from "./KpiCard";
-import { fmtEur, fmtK, fmt } from "../lib/data";
+import { fmtEur, fmtK, fmt, shortMonth } from "../lib/data";
 import { fetchAvailableMonths, fetchRangeData, type RangeRow } from "../lib/api";
 import { getLabel, getGroup, GROUP_ORDER, GROUP_COLORS, FEE_RATE } from "../lib/accounts";
 
 interface Props {
   navigate: (v: "dashboard" | "group" | "account", group?: string, account?: string) => void;
-}
-
-const MONTH_NAMES: Record<string, string> = {
-  "01": "Jan", "02": "Fév", "03": "Mar", "04": "Avr",
-  "05": "Mai", "06": "Jun", "07": "Jul", "08": "Aoû",
-  "09": "Sep", "10": "Oct", "11": "Nov", "12": "Déc",
-};
-
-function shortMonth(m: string): string {
-  const [y, mo] = m.split("-");
-  return `${MONTH_NAMES[mo] || mo} ${y.slice(2)}`;
 }
 
 export function CumulativeReport({ navigate }: Props) {
@@ -54,17 +43,21 @@ export function CumulativeReport({ navigate }: Props) {
   // Load data when range changes
   useEffect(() => {
     if (!rangeFrom || !rangeTo) return;
+    let cancelled = false;
     setLoading(true);
     setError(null);
     fetchRangeData(rangeFrom, rangeTo)
       .then((rows) => {
+        if (cancelled) return;
         setData(rows);
         setLoading(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setError("Erreur lors du chargement des données");
         setLoading(false);
       });
+    return () => { cancelled = true; };
   }, [rangeFrom, rangeTo]);
 
   // Process data

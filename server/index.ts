@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
 import bcrypt from "bcryptjs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -10,10 +9,10 @@ import { opsRouter } from "./routes/ops.js";
 import { uploadRouter } from "./routes/upload.js";
 import { refreshRouter } from "./routes/refresh.js";
 import { authRouter } from "./routes/auth.js";
-import { authMiddleware } from "./middleware/auth.js";
+import { authMiddleware, adminOnly } from "./middleware/auth.js";
 import pool from "./db.js";
 
-dotenv.config();
+// dotenv already loaded by db.ts import
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -21,9 +20,14 @@ const PORT = parseInt(process.env.PORT || "3001");
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
 app.use(cookieParser());
+
+const frontendUrl = process.env.FRONTEND_URL;
+if (process.env.NODE_ENV === "production" && !frontendUrl) {
+  console.warn("WARNING: FRONTEND_URL is not set. CORS will reject cross-origin requests in production.");
+}
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || true, // true = reflect request origin
+    origin: frontendUrl || (process.env.NODE_ENV === "production" ? false : true),
     credentials: true,
   })
 );
@@ -44,8 +48,8 @@ app.get("/api/health", async (_req, res) => {
 // ─── Protected routes ─────────────────────────────────────────────────────────
 app.use("/api/data", authMiddleware, dataRouter);
 app.use("/api/ops", authMiddleware, opsRouter);
-app.use("/api/upload", authMiddleware, uploadRouter);
-app.use("/api/refresh", authMiddleware, refreshRouter);
+app.use("/api/upload", authMiddleware, adminOnly, uploadRouter);
+app.use("/api/refresh", authMiddleware, adminOnly, refreshRouter);
 
 // ─── Auto-migrate on startup ──────────────────────────────────────────────────
 async function autoMigrate() {
@@ -105,22 +109,23 @@ async function autoMigrate() {
   }
 }
 
-// ─── Seed first admin if no users exist ───────────────────────────────────────
+// ─── Seed first admin (only on first creation) ───────────────────────────────
 async function seedAdmin() {
   const email = (process.env.ADMIN_EMAIL || "admin@gads.local").toLowerCase().trim();
-  const password = process.env.ADMIN_PASSWORD || "changeme123";
+  const password = process.env.ADMIN_PASSWORD;
 
-  // Check if this admin email already exists
-  const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
-  if (existing.rows.length > 0) {
-    // Update password in case env var changed
-    const hash = await bcrypt.hash(password, 12);
-    await pool.query("UPDATE users SET password_hash = $1, is_admin = true WHERE email = $2", [hash, email]);
-    console.log(`Admin updated: ${email}`);
+  if (!password) {
+    console.warn("WARNING: ADMIN_PASSWORD not set. Admin account will not be seeded.");
     return;
   }
 
-  // Create admin
+  // Only create if admin doesn't exist yet
+  const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
+  if (existing.rows.length > 0) {
+    console.log(`Admin already exists: ${email}`);
+    return;
+  }
+
   const hash = await bcrypt.hash(password, 12);
   await pool.query(
     "INSERT INTO users (email, name, password_hash, is_admin) VALUES ($1, $2, $3, true)",
@@ -128,6 +133,11 @@ async function seedAdmin() {
   );
   console.log(`Admin created: ${email}`);
 }
+
+// ─── API 404 handler ──────────────────────────────────────────────────────────
+app.all("/api/*", (_req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
 
 // ─── Serve frontend in production ─────────────────────────────────────────────
 if (process.env.NODE_ENV === "production") {

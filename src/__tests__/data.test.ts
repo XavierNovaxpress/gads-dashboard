@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildMonthData, fmt, fmtK, fmtPct, fmtEur, deltaPct, deltaClass } from "../lib/data";
+import { buildMonthData, fmt, fmtK, fmtPct, fmtEur } from "../lib/data";
 import type { RawRow } from "../lib/api";
 
 // ── Formatter tests ──
@@ -54,42 +54,6 @@ describe("fmtEur", () => {
   it("includes comma for decimals (fr-FR locale)", () => {
     const result = fmtEur(1234.56);
     expect(result).toContain("€");
-  });
-});
-
-describe("deltaPct", () => {
-  it("returns positive delta with + sign", () => {
-    expect(deltaPct(150, 100)).toBe("+50.0%");
-  });
-
-  it("returns negative delta", () => {
-    expect(deltaPct(50, 100)).toBe("-50.0%");
-  });
-
-  it("returns N/A when previous is 0", () => {
-    expect(deltaPct(100, 0)).toBe("N/A");
-  });
-
-  it("handles equal values", () => {
-    expect(deltaPct(100, 100)).toBe("+0.0%");
-  });
-});
-
-describe("deltaClass", () => {
-  it("returns emerald for > 5% increase", () => {
-    expect(deltaClass(110, 100)).toBe("text-emerald-500");
-  });
-
-  it("returns red for > 5% decrease", () => {
-    expect(deltaClass(90, 100)).toBe("text-red-500");
-  });
-
-  it("returns muted for small changes", () => {
-    expect(deltaClass(102, 100)).toBe("text-muted-foreground");
-  });
-
-  it("returns muted when previous is 0", () => {
-    expect(deltaClass(100, 0)).toBe("text-muted-foreground");
   });
 });
 

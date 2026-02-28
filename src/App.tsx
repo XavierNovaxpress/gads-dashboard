@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { buildMonthData, type MonthData } from "./lib/data";
+import { buildMonthData, formatMonth, type MonthData } from "./lib/data";
 import { type RawRow, fetchMonthData, fetchAvailableMonths, fetchOpsCosts, updateOpsCostApi, uploadFile, refreshFromWindsor } from "./lib/api";
 import { getCurrentUser, logout, type User } from "./lib/auth";
 import { GROUP_ORDER } from "./lib/accounts";
@@ -82,8 +82,7 @@ export default function App() {
   };
 
   const handleLogout = async () => {
-    await logout();
-    setUser(null);
+    try { await logout(); } finally { setUser(null); }
   };
 
   // Auth loading
@@ -163,6 +162,7 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
 
   useEffect(() => {
     if (!selectedMonth) return;
+    let cancelled = false;
     setLoading(true);
     setError(null);
     const fetches: Promise<any>[] = [
@@ -174,16 +174,19 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
     }
     Promise.all(fetches)
       .then(([data, costs, prevData]) => {
+        if (cancelled) return;
         setRawData(data);
         setOpsCosts(costs);
         setPrevRawData(prevData || []);
         setLoading(false);
       })
       .catch((err) => {
+        if (cancelled) return;
         setError("Erreur lors du chargement des donn\u00e9es");
         setLoading(false);
         console.error(err);
       });
+    return () => { cancelled = true; };
   }, [selectedMonth, prevMonth]);
 
   const monthData: MonthData = useMemo(() => buildMonthData(rawData, opsCosts), [rawData, opsCosts]);
@@ -193,10 +196,11 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
   }, [prevRawData]);
 
   const navigate = useCallback((v: View, group?: string, account?: string) => {
+    if (v === "admin" && !user.is_admin) return;
     setView(v);
-    if (group) setSelectedGroup(group);
-    if (account) setSelectedAccount(account);
-  }, []);
+    if (group !== undefined) setSelectedGroup(group || GROUP_ORDER[0]);
+    if (account !== undefined) setSelectedAccount(account || "");
+  }, [user.is_admin]);
 
   const updateOpsCost = useCallback((label: string, cost: number) => {
     setOpsCosts((prev) => ({ ...prev, [label]: cost }));
@@ -241,17 +245,6 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
     }
   }, [selectedMonth]);
 
-  const MONTH_NAMES: Record<string, string> = {
-    "01": "Janvier", "02": "F\u00e9vrier", "03": "Mars", "04": "Avril",
-    "05": "Mai", "06": "Juin", "07": "Juillet", "08": "Ao\u00fbt",
-    "09": "Septembre", "10": "Octobre", "11": "Novembre", "12": "D\u00e9cembre",
-  };
-
-  const formatMonth = (m: string) => {
-    const [y, mo] = m.split("-");
-    return `${MONTH_NAMES[mo] || mo} ${y}`;
-  };
-
   return (
     <div className={dark ? "dark" : ""}>
       <div className="flex h-screen bg-background text-foreground overflow-hidden">
@@ -275,6 +268,7 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="mobile-menu-btn p-2 rounded-lg hover:bg-accent/50 transition-colors"
+              aria-label={sidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
             >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>

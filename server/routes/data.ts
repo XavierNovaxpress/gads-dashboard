@@ -1,5 +1,7 @@
 import { Router } from "express";
 import pool from "../db.js";
+import { upsertDailyData } from "../lib/upsert.js";
+import { adminOnly } from "../middleware/auth.js";
 
 export const dataRouter = Router();
 
@@ -10,7 +12,9 @@ dataRouter.get("/", async (req, res) => {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
     const [year, m] = month.split("-").map(Number);
     const startDate = `${year}-${String(m).padStart(2, "0")}-01`;
-    const endDate = `${year}-${String(m + 1).padStart(2, "0")}-01`;
+    const endMonth = m === 12 ? 1 : m + 1;
+    const endYear = m === 12 ? year + 1 : year;
+    const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
 
     const result = await pool.query(
       `SELECT date::text, account_name, spend::float, clicks, impressions,
@@ -18,7 +22,7 @@ dataRouter.get("/", async (req, res) => {
        FROM daily_data
        WHERE date >= $1 AND date < $2
        ORDER BY date, account_name`,
-      [startDate, m === 12 ? `${year + 1}-01-01` : endDate]
+      [startDate, endDate]
     );
 
     res.json({ month, rows: result.rows, count: result.rowCount });
@@ -83,9 +87,9 @@ dataRouter.get("/range", async (req, res) => {
   }
 });
 
-// POST /api/data
+// POST /api/data (admin only)
 // Bulk upsert daily data rows
-dataRouter.post("/", async (req, res) => {
+dataRouter.post("/", adminOnly, async (req, res) => {
   try {
     const rows = req.body.rows;
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -95,24 +99,9 @@ dataRouter.post("/", async (req, res) => {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      let upserted = 0;
-      for (const row of rows) {
-        await client.query(
-          `INSERT INTO daily_data (date, account_name, spend, clicks, impressions, conversions, average_cpc, ctr)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           ON CONFLICT (date, account_name) DO UPDATE SET
-             spend = EXCLUDED.spend,
-             clicks = EXCLUDED.clicks,
-             impressions = EXCLUDED.impressions,
-             conversions = EXCLUDED.conversions,
-             average_cpc = EXCLUDED.average_cpc,
-             ctr = EXCLUDED.ctr`,
-          [row.date, row.account_name, row.spend, row.clicks, row.impressions, row.conversions, row.average_cpc, row.ctr]
-        );
-        upserted++;
-      }
+      const processed = await upsertDailyData(client, rows);
       await client.query("COMMIT");
-      res.json({ success: true, upserted });
+      res.json({ success: true, upserted: processed });
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;

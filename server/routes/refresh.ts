@@ -1,5 +1,6 @@
 import { Router } from "express";
 import pool from "../db.js";
+import { upsertDailyData } from "../lib/upsert.js";
 
 export const refreshRouter = Router();
 
@@ -55,7 +56,7 @@ refreshRouter.post("/", async (req, res) => {
     if (!windsorRes.ok) {
       const errText = await windsorRes.text();
       console.error("Windsor API error:", errText);
-      return res.status(502).json({ error: "Windsor API error", details: errText });
+      return res.status(502).json({ error: "Windsor API error" });
     }
 
     const windsorData = await windsorRes.json();
@@ -74,37 +75,13 @@ refreshRouter.post("/", async (req, res) => {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      let upserted = 0;
-      for (const row of validRows) {
-        await client.query(
-          `INSERT INTO daily_data (date, account_name, spend, clicks, impressions, conversions, average_cpc, ctr)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           ON CONFLICT (date, account_name) DO UPDATE SET
-             spend = EXCLUDED.spend,
-             clicks = EXCLUDED.clicks,
-             impressions = EXCLUDED.impressions,
-             conversions = EXCLUDED.conversions,
-             average_cpc = EXCLUDED.average_cpc,
-             ctr = EXCLUDED.ctr`,
-          [
-            row.date,
-            row.account_name,
-            row.spend || 0,
-            row.clicks || 0,
-            row.impressions || 0,
-            row.conversions || 0,
-            row.average_cpc || 0,
-            row.ctr || 0,
-          ]
-        );
-        upserted++;
-      }
+      const processed = await upsertDailyData(client, validRows);
       await client.query("COMMIT");
 
-      console.log(`Windsor refresh complete: ${upserted} rows upserted for ${dateFrom} to ${dateTo}`);
+      console.log(`Windsor refresh complete: ${processed} rows upserted for ${dateFrom} to ${dateTo}`);
       res.json({
         success: true,
-        upserted,
+        upserted: processed,
         dateRange: { from: dateFrom, to: dateTo },
         accounts: [...new Set(validRows.map((r) => r.account_name))].length,
       });

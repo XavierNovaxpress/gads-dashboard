@@ -43,6 +43,12 @@ export function CumulativeReport({ navigate }: Props) {
   // Load data when range changes
   useEffect(() => {
     if (!rangeFrom || !rangeTo) return;
+    // Auto-swap if user selected from > to
+    if (rangeFrom > rangeTo) {
+      setRangeFrom(rangeTo);
+      setRangeTo(rangeFrom);
+      return;
+    }
     let cancelled = false;
     setLoading(true);
     setError(null);

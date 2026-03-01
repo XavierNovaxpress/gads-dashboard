@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import path from "path";
@@ -19,6 +20,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || "3001");
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
+app.use(helmet());
 app.use(cookieParser());
 
 const frontendUrl = process.env.FRONTEND_URL;

@@ -99,8 +99,8 @@ authRouter.post("/register", authRateLimit, async (req, res) => {
     if (!token || !name || !password) {
       return res.status(400).json({ error: "Tous les champs sont requis" });
     }
-    if (password.length < 8) {
-      return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caract\u00e8res" });
+    if (password.length < 8 || password.length > 72) {
+      return res.status(400).json({ error: "Le mot de passe doit contenir entre 8 et 72 caractères" });
     }
 
     await client.query("BEGIN");

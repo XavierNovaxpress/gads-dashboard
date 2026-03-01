@@ -3,11 +3,16 @@ import pool from "../db.js";
 
 export const opsRouter = Router();
 
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
 // GET /api/ops?month=2026-02
 // Returns ops costs for a given month
 opsRouter.get("/", async (req, res) => {
   try {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+    if (!MONTH_RE.test(month)) {
+      return res.status(400).json({ error: "Invalid month format, expected YYYY-MM" });
+    }
     const result = await pool.query(
       `SELECT account_label, cost::float, updated_at
        FROM ops_costs
@@ -33,6 +38,9 @@ opsRouter.put("/", async (req, res) => {
     const { account_label, month, cost } = req.body;
     if (!account_label || !month || cost === undefined) {
       return res.status(400).json({ error: "account_label, month, cost required" });
+    }
+    if (!MONTH_RE.test(month)) {
+      return res.status(400).json({ error: "Invalid month format, expected YYYY-MM" });
     }
     await pool.query(
       `INSERT INTO ops_costs (account_label, month, cost, updated_at)

@@ -82,6 +82,7 @@ async function autoMigrate() {
         updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(account_label, month)
       );
+      CREATE INDEX IF NOT EXISTS idx_ops_costs_account_label ON ops_costs(account_label);
 
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,

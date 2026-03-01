@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, AreaChart, Area
@@ -15,7 +15,7 @@ interface Props {
   updateOpsCost: (label: string, cost: number) => void;
 }
 
-export function AccountDetail({ monthData, accountGname, navigate, opsCost, updateOpsCost }: Props) {
+export const AccountDetail = memo(function AccountDetail({ monthData, accountGname, navigate, opsCost, updateOpsCost }: Props) {
   const [editingOps, setEditingOps] = useState(false);
   const [opsInput, setOpsInput] = useState("");
 
@@ -252,4 +252,4 @@ export function AccountDetail({ monthData, accountGname, navigate, opsCost, upda
       </div>
     </div>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
@@ -13,7 +13,7 @@ interface Props {
   navigate: (v: "dashboard" | "group" | "account", group?: string, account?: string) => void;
 }
 
-export function CumulativeReport({ navigate }: Props) {
+export const CumulativeReport = memo(function CumulativeReport({ navigate }: Props) {
   const [months, setMonths] = useState<string[]>([]);
   const [rangeFrom, setRangeFrom] = useState("");
   const [rangeTo, setRangeTo] = useState("");
@@ -404,4 +404,4 @@ export function CumulativeReport({ navigate }: Props) {
       )}
     </div>
   );
-}
+});

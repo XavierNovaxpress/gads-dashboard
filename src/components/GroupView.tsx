@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend
@@ -14,7 +14,7 @@ interface Props {
   updateOpsCost: (label: string, cost: number) => void;
 }
 
-export function GroupView({ monthData, group, navigate, updateOpsCost }: Props) {
+export const GroupView = memo(function GroupView({ monthData, group, navigate, updateOpsCost }: Props) {
   const [editingOps, setEditingOps] = useState<string | null>(null);
   const [opsInput, setOpsInput] = useState("");
 
@@ -222,4 +222,4 @@ export function GroupView({ monthData, group, navigate, updateOpsCost }: Props) 
       </div>
     </div>
   );
-}
+});

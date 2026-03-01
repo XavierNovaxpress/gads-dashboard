@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
@@ -36,7 +37,7 @@ function DeltaBadge({ current, previous, invert = false }: { current: number; pr
   );
 }
 
-export function Dashboard({ monthData, prevMonthData, navigate }: Props) {
+export const Dashboard = memo(function Dashboard({ monthData, prevMonthData, navigate }: Props) {
   const { totalSpend, totalFees, totalInvoice, projection, groups, dailyTotals, accounts, daysElapsed, daysInMonth } = monthData;
   const prev = prevMonthData;
 
@@ -351,4 +352,4 @@ export function Dashboard({ monthData, prevMonthData, navigate }: Props) {
       </div>
     </div>
   );
-}
+});

@@ -5,11 +5,16 @@ import { adminOnly } from "../middleware/auth.js";
 
 export const dataRouter = Router();
 
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
 // GET /api/data?month=2026-02
 // Returns all daily data for a given month
 dataRouter.get("/", async (req, res) => {
   try {
     const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+    if (!MONTH_RE.test(month)) {
+      return res.status(400).json({ error: "Invalid month format, expected YYYY-MM" });
+    }
     const [year, m] = month.split("-").map(Number);
     const startDate = `${year}-${String(m).padStart(2, "0")}-01`;
     const endMonth = m === 12 ? 1 : m + 1;
@@ -56,6 +61,9 @@ dataRouter.get("/range", async (req, res) => {
     const to = req.query.to as string;
     if (!from || !to) {
       return res.status(400).json({ error: "from and to query params required (YYYY-MM)" });
+    }
+    if (!MONTH_RE.test(from) || !MONTH_RE.test(to)) {
+      return res.status(400).json({ error: "Invalid month format, expected YYYY-MM" });
     }
 
     const [fy, fm] = from.split("-").map(Number);

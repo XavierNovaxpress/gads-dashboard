@@ -1,19 +1,26 @@
 import { Router } from "express";
+import { z } from "zod";
 import pool from "../db.js";
 import { upsertDailyData } from "../lib/upsert.js";
 
 export const refreshRouter = Router();
 
-interface WindsorRow {
-  date: string;
-  spend: number;
-  clicks: number;
-  impressions: number;
-  conversions: number;
-  average_cpc: number;
-  ctr: number;
-  account_name: string;
-}
+const WindsorRowSchema = z.object({
+  date: z.string(),
+  spend: z.coerce.number(),
+  clicks: z.coerce.number().int(),
+  impressions: z.coerce.number().int(),
+  conversions: z.coerce.number(),
+  average_cpc: z.coerce.number(),
+  ctr: z.coerce.number(),
+  account_name: z.string(),
+});
+
+const WindsorResponseSchema = z.object({
+  data: z.array(WindsorRowSchema).optional().default([]),
+});
+
+type WindsorRow = z.infer<typeof WindsorRowSchema>;
 
 // POST /api/refresh?month=2026-02
 // Fetches data from Windsor.ai API and upserts into database
@@ -30,6 +37,9 @@ refreshRouter.post("/", async (req, res) => {
     let year: number, month: number;
 
     if (monthParam) {
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthParam)) {
+        return res.status(400).json({ error: "Invalid month format, expected YYYY-MM" });
+      }
       [year, month] = monthParam.split("-").map(Number);
     } else {
       year = now.getFullYear();
@@ -59,8 +69,13 @@ refreshRouter.post("/", async (req, res) => {
       return res.status(502).json({ error: "Windsor API error" });
     }
 
-    const windsorData = await windsorRes.json();
-    const rows: WindsorRow[] = windsorData.data || [];
+    const windsorJson = await windsorRes.json();
+    const parsed = WindsorResponseSchema.safeParse(windsorJson);
+    if (!parsed.success) {
+      console.error("Windsor response validation failed:", parsed.error.message);
+      return res.status(502).json({ error: "Invalid response from Windsor API" });
+    }
+    const rows: WindsorRow[] = parsed.data.data;
 
     if (rows.length === 0) {
       return res.json({ success: true, message: "No data returned from Windsor", upserted: 0 });

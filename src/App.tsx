@@ -1,17 +1,18 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { buildMonthData, formatMonth, type MonthData } from "./lib/data";
 import { type RawRow, fetchMonthData, fetchAvailableMonths, fetchOpsCosts, updateOpsCostApi, uploadFile, refreshFromWindsor } from "./lib/api";
 import { getCurrentUser, logout, type User } from "./lib/auth";
 import { GROUP_ORDER } from "./lib/accounts";
 import { Sidebar } from "./components/Sidebar";
-import { Dashboard } from "./components/Dashboard";
-import { GroupView } from "./components/GroupView";
-import { AccountDetail } from "./components/AccountDetail";
-import { HistorySync } from "./components/HistorySync";
-import { CumulativeReport } from "./components/CumulativeReport";
-import LoginPage from "./components/LoginPage";
-import RegisterPage from "./components/RegisterPage";
-import AdminPanel from "./components/AdminPanel";
+
+const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
+const GroupView = lazy(() => import("./components/GroupView").then(m => ({ default: m.GroupView })));
+const AccountDetail = lazy(() => import("./components/AccountDetail").then(m => ({ default: m.AccountDetail })));
+const HistorySync = lazy(() => import("./components/HistorySync").then(m => ({ default: m.HistorySync })));
+const CumulativeReport = lazy(() => import("./components/CumulativeReport").then(m => ({ default: m.CumulativeReport })));
+const LoginPage = lazy(() => import("./components/LoginPage"));
+const RegisterPage = lazy(() => import("./components/RegisterPage"));
+const AdminPanel = lazy(() => import("./components/AdminPanel"));
 import { Upload, RefreshCw, ChevronDown, Check, Loader2, CheckCircle2, AlertCircle, CloudDownload, Menu, X, LogOut, Shield, TrendingUp } from "lucide-react";
 
 type View = "dashboard" | "group" | "account" | "historysync" | "cumulative" | "admin";
@@ -101,17 +102,19 @@ export default function App() {
     // Check if this is an invitation link
     if (inviteToken) {
       return (
-        <RegisterPage
-          token={inviteToken}
-          onSuccess={handleLoginSuccess}
-          onGoToLogin={() => {
-            window.history.replaceState({}, "", window.location.pathname);
-            window.location.reload();
-          }}
-        />
+        <Suspense fallback={null}>
+          <RegisterPage
+            token={inviteToken}
+            onSuccess={handleLoginSuccess}
+            onGoToLogin={() => {
+              window.history.replaceState({}, "", window.location.pathname);
+              window.location.reload();
+            }}
+          />
+        </Suspense>
       );
     }
-    return <LoginPage onSuccess={handleLoginSuccess} />;
+    return <Suspense fallback={null}><LoginPage onSuccess={handleLoginSuccess} /></Suspense>;
   }
 
   // Authenticated → Dashboard
@@ -363,6 +366,7 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
 
           {/* Main content */}
           <main className="flex-1 overflow-y-auto">
+          <Suspense fallback={<SkeletonLoader />}>
             {view === "admin" && user.is_admin && (
               <div className="p-6 max-w-[800px]">
                 <AdminPanel onBack={() => setView("dashboard")} />
@@ -412,6 +416,7 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
                 {view === "account" && <AccountDetail monthData={monthData} accountGname={selectedAccount} navigate={navigate} opsCost={opsCosts} updateOpsCost={updateOpsCost} />}
               </>
             )}
+          </Suspense>
           </main>
         </div>
       </div>

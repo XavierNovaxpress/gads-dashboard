@@ -28,11 +28,13 @@ uploadRouter.post("/", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "JSON must be a non-empty array" });
     }
 
-    // Validate first row
+    // Validate all rows
     const required = ["date", "account_name", "spend", "clicks", "impressions", "conversions"];
-    for (const key of required) {
-      if (!(key in rows[0])) {
-        return res.status(400).json({ error: `Missing field: ${key}` });
+    for (let i = 0; i < rows.length; i++) {
+      for (const key of required) {
+        if (!(key in rows[i])) {
+          return res.status(400).json({ error: `Row ${i}: missing field "${key}"` });
+        }
       }
     }
 

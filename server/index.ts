@@ -26,7 +26,7 @@ app.use(cookieParser());
 
 const frontendUrl = process.env.FRONTEND_URL;
 if (process.env.NODE_ENV === "production" && !frontendUrl) {
-  console.warn("WARNING: FRONTEND_URL is not set. CORS will reject cross-origin requests in production.");
+  console.log("INFO: FRONTEND_URL not set. Same-origin setup assumed — CORS disabled (requests served from same host are unaffected).");
 }
 app.use(
   cors({

@@ -9,11 +9,16 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+// In production, default to rejectUnauthorized: false to support providers
+// (e.g. Railway) that use self-signed certs. Set DATABASE_SSL_REJECT_UNAUTHORIZED=true
+// to enforce strict verification when your provider uses a trusted CA.
+const rejectUnauthorized = process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === "true";
+
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
   ssl:
     process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: true }
+      ? { rejectUnauthorized }
       : process.env.DATABASE_SSL === "true"
         ? { rejectUnauthorized: false }
         : false,

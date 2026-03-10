@@ -1,5 +1,6 @@
 import { type RawRow } from "./api";
-import { ACCOUNTS, getLabel, getGroup, FEE_RATE, GROUP_ORDER } from "./accounts";
+import { ACCOUNTS, FEE_RATE, GROUP_ORDER, type AccountConfig } from "./accounts";
+export type { AccountConfig } from "./accounts";
 
 export type { RawRow } from "./api";
 
@@ -146,13 +147,29 @@ function aggregateByDateAndAccount(rows: RawRow[]): Record<string, DailyRow[]> {
 }
 
 // ── Build month data ──
-export function buildMonthData(rows: RawRow[], opsCosts: Record<string, number>): MonthData {
+export function buildMonthData(
+  rows: RawRow[],
+  opsCosts: Record<string, number>,
+  accountOverrides?: AccountConfig[]
+): MonthData {
   if (rows.length === 0) {
     return {
       month: "", label: "", daysInMonth: 0, daysElapsed: 0,
       accounts: [], groups: [], dailyTotals: [], dailyByAccount: {},
       totalSpend: 0, totalFees: 0, totalInvoice: 0, projection: 0,
     };
+  }
+
+  const configAccounts = accountOverrides ?? ACCOUNTS;
+
+  // Helpers scoped to the active account list
+  function _getLabel(gname: string): string {
+    const a = configAccounts.find((ac) => ac.gname === gname);
+    return a ? a.label : gname;
+  }
+  function _getGroup(gname: string): string {
+    const a = configAccounts.find((ac) => ac.gname === gname);
+    return a ? a.group : "Autres";
   }
 
   const dates = rows.map((r) => r.date).sort();
@@ -170,7 +187,7 @@ export function buildMonthData(rows: RawRow[], opsCosts: Record<string, number>)
 
   // Build account summaries
   const accounts: AccountSummary[] = [];
-  for (const acct of ACCOUNTS) {
+  for (const acct of configAccounts) {
     if (!acct.gname) continue;
     const data = byAccount.get(acct.gname);
     const spend = data?.spend ?? 0;
@@ -200,9 +217,9 @@ export function buildMonthData(rows: RawRow[], opsCosts: Record<string, number>)
       const spend = data.spend;
       const fees = spend * FEE_RATE;
       accounts.push({
-        label: getLabel(gname),
+        label: _getLabel(gname),
         gname,
-        group: getGroup(gname),
+        group: _getGroup(gname),
         spend, clicks: data.clicks, impressions: data.impressions, conversions: data.conversions,
         cpc: data.clicks > 0 ? spend / data.clicks : 0,
         ctr: data.impressions > 0 ? data.clicks / data.impressions : 0,
@@ -211,10 +228,30 @@ export function buildMonthData(rows: RawRow[], opsCosts: Record<string, number>)
     }
   }
 
+  // Derive group order from config accounts, preserving GROUP_ORDER priority
+  const configGroupOrder = (() => {
+    const seen = new Set<string>();
+    const order: string[] = [];
+    // First add GROUP_ORDER entries that exist in this account set
+    for (const g of GROUP_ORDER) {
+      if (configAccounts.some((a) => a.group === g)) { seen.add(g); order.push(g); }
+    }
+    // Then add any new groups from dynamic accounts
+    for (const a of configAccounts) {
+      if (!seen.has(a.group)) { seen.add(a.group); order.push(a.group); }
+    }
+    // Also include groups from data not in config
+    for (const a of accounts) {
+      if (!seen.has(a.group)) { seen.add(a.group); order.push(a.group); }
+    }
+    return order;
+  })();
+
   // Build group summaries
   const groups: GroupSummary[] = [];
-  for (const group of GROUP_ORDER) {
+  for (const group of configGroupOrder) {
     const groupAccounts = accounts.filter((a) => a.group === group);
+    if (groupAccounts.length === 0) continue;
     groups.push({
       group,
       accounts: groupAccounts,

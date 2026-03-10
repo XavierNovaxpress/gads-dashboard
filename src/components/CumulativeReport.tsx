@@ -7,13 +7,33 @@ import { BarChart3, TrendingUp, DollarSign, Target, Calendar, Loader2, ArrowRigh
 import { KpiCard } from "./KpiCard";
 import { fmtEur, fmtK, fmt, shortMonth } from "../lib/data";
 import { fetchAvailableMonths, fetchRangeData, type RangeRow } from "../lib/api";
-import { getLabel, getGroup, GROUP_ORDER, GROUP_COLORS, FEE_RATE } from "../lib/accounts";
+import { GROUP_ORDER, GROUP_COLORS, FEE_RATE, type AccountConfig } from "../lib/accounts";
 
 interface Props {
   navigate: (v: "dashboard" | "group" | "account", group?: string, account?: string) => void;
+  accountOverrides?: AccountConfig[];
 }
 
-export const CumulativeReport = memo(function CumulativeReport({ navigate }: Props) {
+export const CumulativeReport = memo(function CumulativeReport({ navigate, accountOverrides }: Props) {
+  function _getLabel(gname: string): string {
+    const list = accountOverrides;
+    if (list) { const a = list.find((ac) => ac.gname === gname); if (a) return a.label; }
+    return gname;
+  }
+  function _getGroup(gname: string): string {
+    const list = accountOverrides;
+    if (list) { const a = list.find((ac) => ac.gname === gname); if (a) return a.group; }
+    return "Autres";
+  }
+  const activeGroupOrder = accountOverrides
+    ? (() => {
+        const seen = new Set<string>();
+        const order: string[] = [];
+        for (const g of GROUP_ORDER) { if (accountOverrides.some((a) => a.group === g)) { seen.add(g); order.push(g); } }
+        for (const a of accountOverrides) { if (!seen.has(a.group)) { seen.add(a.group); order.push(a.group); } }
+        return order;
+      })()
+    : GROUP_ORDER;
   const [months, setMonths] = useState<string[]>([]);
   const [rangeFrom, setRangeFrom] = useState("");
   const [rangeTo, setRangeTo] = useState("");
@@ -99,7 +119,7 @@ export const CumulativeReport = memo(function CumulativeReport({ navigate }: Pro
     // Group totals per month
     const groupMonthly = new Map<string, Map<string, number>>();
     for (const row of data) {
-      const group = getGroup(row.account_name);
+      const group = _getGroup(row.account_name);
       if (!groupMonthly.has(group)) groupMonthly.set(group, new Map());
       const gm = groupMonthly.get(group)!;
       gm.set(row.month, (gm.get(row.month) || 0) + row.spend);
@@ -109,7 +129,7 @@ export const CumulativeReport = memo(function CumulativeReport({ navigate }: Pro
     const allMonths = monthlyTotals.map((m) => m.month);
     const stackedData = allMonths.map((month) => {
       const entry: Record<string, string | number> = { month, label: shortMonth(month) };
-      for (const group of GROUP_ORDER) {
+      for (const group of activeGroupOrder) {
         entry[group] = groupMonthly.get(group)?.get(month) || 0;
       }
       return entry;
@@ -134,18 +154,18 @@ export const CumulativeReport = memo(function CumulativeReport({ navigate }: Pro
       .slice(0, 10)
       .map(([gname, d]) => ({
         gname,
-        label: getLabel(gname),
-        group: getGroup(gname),
+        label: _getLabel(gname),
+        group: _getGroup(gname),
         ...d,
       }));
 
     // Group pie data
     const groupTotals = new Map<string, number>();
     for (const row of data) {
-      const group = getGroup(row.account_name);
+      const group = _getGroup(row.account_name);
       groupTotals.set(group, (groupTotals.get(group) || 0) + row.spend);
     }
-    const pieData = GROUP_ORDER
+    const pieData = activeGroupOrder
       .filter((g) => (groupTotals.get(g) || 0) > 0)
       .map((g) => ({ name: g, value: groupTotals.get(g) || 0 }));
 
@@ -170,7 +190,7 @@ export const CumulativeReport = memo(function CumulativeReport({ navigate }: Pro
       avgMonthly,
       monthCount: monthlyTotals.length,
     };
-  }, [data]);
+  }, [data, accountOverrides]);
 
   if (loading) {
     return (
@@ -282,7 +302,7 @@ export const CumulativeReport = memo(function CumulativeReport({ navigate }: Pro
                   formatter={(v: any, name: string) => [fmtEur(Number(v) || 0), name]}
                 />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                {GROUP_ORDER.map((group) => (
+                {activeGroupOrder.map((group) => (
                   <Bar key={group} dataKey={group} stackId="a" fill={GROUP_COLORS[group] || "#888"} radius={[0, 0, 0, 0]} />
                 ))}
               </BarChart>

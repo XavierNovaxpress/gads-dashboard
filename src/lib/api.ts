@@ -84,3 +84,126 @@ export async function fetchRangeData(from: string, to: string): Promise<RangeRow
   const json = await res.json();
   return json.rows;
 }
+
+// ── MCC Account Management ───────────────────────────────────────────────────
+
+export interface MccAccount {
+  id: number;
+  name: string;
+  windsor_api_key_preview: string;
+  created_at: string;
+}
+
+export interface ManagedAccount {
+  id: number;
+  mcc_id: number;
+  mcc_name: string;
+  label: string;
+  cid: string;
+  gname: string | null;
+  group_name: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface DiscoveredAccount {
+  gname: string;
+  total_spend: number;
+}
+
+export async function fetchMccs(): Promise<MccAccount[]> {
+  const res = await authFetch(`${BASE}/mcc`);
+  if (!res.ok) throw new Error("Failed to fetch MCCs");
+  const json = await res.json();
+  return json.mccs;
+}
+
+export async function createMcc(name: string, windsor_api_key: string): Promise<MccAccount> {
+  const res = await authFetch(`${BASE}/mcc`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, windsor_api_key }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to create MCC");
+  }
+  const json = await res.json();
+  return json.mcc;
+}
+
+export async function deleteMcc(mccId: number): Promise<void> {
+  const res = await authFetch(`${BASE}/mcc/${mccId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete MCC");
+}
+
+export async function discoverMccAccounts(mccId: number): Promise<{ accounts: DiscoveredAccount[]; dateRange: { from: string; to: string } }> {
+  const res = await authFetch(`${BASE}/mcc/${mccId}/discover`, { method: "POST" });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Discovery failed");
+  }
+  return res.json();
+}
+
+export async function fetchManagedAccounts(): Promise<ManagedAccount[]> {
+  const res = await authFetch(`${BASE}/mcc/accounts`);
+  if (!res.ok) throw new Error("Failed to fetch managed accounts");
+  const json = await res.json();
+  return json.accounts;
+}
+
+export async function addManagedAccount(
+  mccId: number,
+  data: { label: string; cid: string; gname: string | null; group_name: string; sort_order?: number }
+): Promise<ManagedAccount> {
+  const res = await authFetch(`${BASE}/mcc/${mccId}/accounts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to add account");
+  }
+  const json = await res.json();
+  return json.account;
+}
+
+export async function bulkAddManagedAccounts(
+  mccId: number,
+  accounts: Array<{ label: string; cid: string; gname: string | null; group_name: string; sort_order?: number }>
+): Promise<{ count: number }> {
+  const res = await authFetch(`${BASE}/mcc/${mccId}/accounts/bulk`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accounts }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Bulk add failed");
+  }
+  return res.json();
+}
+
+export async function updateManagedAccount(
+  accountId: number,
+  data: Partial<{ label: string; cid: string; gname: string | null; group_name: string; sort_order: number }>
+): Promise<ManagedAccount> {
+  const res = await authFetch(`${BASE}/mcc/accounts/${accountId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to update account");
+  }
+  const json = await res.json();
+  return json.account;
+}
+
+export async function deleteManagedAccount(accountId: number): Promise<void> {
+  const res = await authFetch(`${BASE}/mcc/accounts/${accountId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete account");
+}

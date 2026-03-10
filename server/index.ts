@@ -10,6 +10,7 @@ import { opsRouter } from "./routes/ops.js";
 import { uploadRouter } from "./routes/upload.js";
 import { refreshRouter } from "./routes/refresh.js";
 import { authRouter } from "./routes/auth.js";
+import { mccRouter } from "./routes/mcc.js";
 import { authMiddleware, adminOnly } from "./middleware/auth.js";
 import pool from "./db.js";
 
@@ -52,6 +53,8 @@ app.use("/api/data", authMiddleware, dataRouter);
 app.use("/api/ops", authMiddleware, opsRouter);
 app.use("/api/upload", authMiddleware, adminOnly, uploadRouter);
 app.use("/api/refresh", authMiddleware, adminOnly, refreshRouter);
+// MCC: reads available to all auth users, writes admin-only (enforced in router)
+app.use("/api/mcc", authMiddleware, mccRouter);
 
 // ─── Auto-migrate on startup ──────────────────────────────────────────────────
 async function autoMigrate() {
@@ -105,6 +108,27 @@ async function autoMigrate() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token);
+
+      CREATE TABLE IF NOT EXISTS mcc_accounts (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        windsor_api_key VARCHAR(512) NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS managed_accounts (
+        id SERIAL PRIMARY KEY,
+        mcc_id INTEGER REFERENCES mcc_accounts(id) ON DELETE CASCADE,
+        label VARCHAR(255) NOT NULL,
+        cid VARCHAR(20) NOT NULL DEFAULT '',
+        gname VARCHAR(512),
+        group_name VARCHAR(255) NOT NULL DEFAULT 'Autres',
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(mcc_id, gname)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_managed_accounts_mcc ON managed_accounts(mcc_id);
     `);
     console.log("Auto-migration complete.");
   } finally {

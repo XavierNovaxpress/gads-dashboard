@@ -1,17 +1,20 @@
-import { LayoutDashboard, Sun, Moon, ChevronRight, TrendingUp, Download, BarChart3 } from "lucide-react";
-import { GROUP_ORDER, GROUP_COLORS } from "../lib/accounts";
+import { LayoutDashboard, Sun, Moon, ChevronRight, TrendingUp, Download, BarChart3, Link } from "lucide-react";
+import { GROUP_COLORS } from "../lib/accounts";
 import { fmtEur, type MonthData } from "../lib/data";
 
 interface Props {
   dark: boolean;
   setDark: (v: boolean) => void;
   view: string;
-  navigate: (v: "dashboard" | "group" | "account" | "historysync" | "cumulative", group?: string) => void;
+  navigate: (v: "dashboard" | "group" | "account" | "historysync" | "cumulative" | "mccmanager", group?: string) => void;
   selectedGroup: string;
   monthData: MonthData;
+  groupOrder?: string[];
+  isAdmin?: boolean;
 }
 
-export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthData }: Props) {
+export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthData, groupOrder, isAdmin }: Props) {
+  const activeGroups = groupOrder ?? monthData.groups.map((g) => g.group);
   const activeClass = "bg-white/10 text-white font-medium shadow-sm";
   const inactiveClass = "text-white/50 hover:bg-white/5 hover:text-white/80";
 
@@ -65,6 +68,18 @@ export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthDat
           Sync historique
         </button>
 
+        {isAdmin && (
+          <button
+            onClick={() => navigate("mccmanager")}
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-lg transition-all duration-200 mt-0.5 ${
+              view === "mccmanager" ? activeClass : inactiveClass
+            }`}
+          >
+            <Link className="w-4 h-4" />
+            Comptes MCC
+          </button>
+        )}
+
         <div className="px-3 pt-5 pb-2">
           <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "rgba(236,87,96,0.6)" }}>
             Groupes
@@ -72,7 +87,7 @@ export function Sidebar({ dark, setDark, view, navigate, selectedGroup, monthDat
         </div>
 
         <div className="space-y-0.5">
-          {GROUP_ORDER.map((group, i) => {
+          {activeGroups.map((group, i) => {
             const gData = monthData.groups.find((g) => g.group === group);
             const active = view === "group" && selectedGroup === group;
             return (

@@ -1,8 +1,8 @@
 import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { buildMonthData, formatMonth, type MonthData } from "./lib/data";
-import { type RawRow, fetchMonthData, fetchAvailableMonths, fetchOpsCosts, updateOpsCostApi, uploadFile, refreshFromWindsor } from "./lib/api";
+import { type RawRow, fetchMonthData, fetchAvailableMonths, fetchOpsCosts, updateOpsCostApi, uploadFile, refreshFromWindsor, fetchManagedAccounts, type ManagedAccount } from "./lib/api";
 import { getCurrentUser, logout, type User } from "./lib/auth";
-import { GROUP_ORDER } from "./lib/accounts";
+import { ACCOUNTS, GROUP_ORDER, type AccountConfig } from "./lib/accounts";
 import { Sidebar } from "./components/Sidebar";
 
 const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
@@ -13,9 +13,10 @@ const CumulativeReport = lazy(() => import("./components/CumulativeReport").then
 const LoginPage = lazy(() => import("./components/LoginPage"));
 const RegisterPage = lazy(() => import("./components/RegisterPage"));
 const AdminPanel = lazy(() => import("./components/AdminPanel"));
+const MccManager = lazy(() => import("./components/MccManager").then(m => ({ default: m.MccManager })));
 import { Upload, RefreshCw, ChevronDown, Check, Loader2, CheckCircle2, AlertCircle, CloudDownload, Menu, X, LogOut, Shield, TrendingUp } from "lucide-react";
 
-type View = "dashboard" | "group" | "account" | "historysync" | "cumulative" | "admin";
+type View = "dashboard" | "group" | "account" | "historysync" | "cumulative" | "admin" | "mccmanager";
 
 function SkeletonLoader() {
   return (
@@ -127,6 +128,7 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
   const [view, setView] = useState<View>("dashboard");
   const [selectedGroup, setSelectedGroup] = useState<string>(GROUP_ORDER[0]);
   const [selectedAccount, setSelectedAccount] = useState<string>("");
+  const [dynamicAccounts, setDynamicAccounts] = useState<AccountConfig[] | null>(null);
   const [opsCosts, setOpsCosts] = useState<Record<string, number>>({});
 
   const [rawData, setRawData] = useState<RawRow[]>([]);
@@ -140,6 +142,45 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
   const [refreshing, setRefreshing] = useState(false);
   const [refreshStatus, setRefreshStatus] = useState<{ msg: string; type: "success" | "error" | "info" } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Load dynamic accounts from DB (falls back to hardcoded if none configured)
+  const loadDynamicAccounts = useCallback(async () => {
+    try {
+      const managed: ManagedAccount[] = await fetchManagedAccounts();
+      if (managed.length > 0) {
+        const accounts: AccountConfig[] = managed.map((a) => ({
+          label: a.label,
+          cid: a.cid,
+          gname: a.gname,
+          group: a.group_name,
+        }));
+        setDynamicAccounts(accounts);
+      } else {
+        setDynamicAccounts(null); // use hardcoded fallback
+      }
+    } catch {
+      setDynamicAccounts(null); // use hardcoded fallback on error
+    }
+  }, []);
+
+  useEffect(() => { loadDynamicAccounts(); }, [loadDynamicAccounts]);
+
+  // Active account list: dynamic if available, otherwise hardcoded
+  const activeAccounts: AccountConfig[] = useMemo(
+    () => dynamicAccounts ?? ACCOUNTS,
+    [dynamicAccounts]
+  );
+
+  // Derived group order from active accounts
+  const activeGroupOrder = useMemo(() => {
+    const seen = new Set<string>();
+    const order: string[] = [];
+    for (const g of GROUP_ORDER) { seen.add(g); order.push(g); }
+    for (const a of activeAccounts) {
+      if (!seen.has(a.group)) { seen.add(a.group); order.push(a.group); }
+    }
+    return order.filter((g) => activeAccounts.some((a) => a.group === g));
+  }, [activeAccounts]);
 
   useEffect(() => {
     fetchAvailableMonths()
@@ -192,14 +233,17 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
     return () => { cancelled = true; };
   }, [selectedMonth, prevMonth]);
 
-  const monthData: MonthData = useMemo(() => buildMonthData(rawData, opsCosts), [rawData, opsCosts]);
+  const monthData: MonthData = useMemo(
+    () => buildMonthData(rawData, opsCosts, activeAccounts),
+    [rawData, opsCosts, activeAccounts]
+  );
   const prevMonthData: MonthData | null = useMemo(() => {
     if (prevRawData.length === 0) return null;
-    return buildMonthData(prevRawData, {});
-  }, [prevRawData]);
+    return buildMonthData(prevRawData, {}, activeAccounts);
+  }, [prevRawData, activeAccounts]);
 
   const navigate = useCallback((v: View, group?: string, account?: string) => {
-    if (v === "admin" && !user.is_admin) return;
+    if ((v === "admin" || v === "mccmanager") && !user.is_admin) return;
     setView(v);
     if (group !== undefined) setSelectedGroup(group || GROUP_ORDER[0]);
     if (account !== undefined) setSelectedAccount(account || "");
@@ -253,14 +297,14 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
       <div className="flex h-screen bg-background text-foreground overflow-hidden">
         {/* Desktop sidebar */}
         <div className="sidebar-desktop shrink-0 h-full">
-          <Sidebar dark={dark} setDark={setDark} view={view} navigate={(v: View, g?: string) => { navigate(v, g); setSidebarOpen(false); }} selectedGroup={selectedGroup} monthData={monthData} />
+          <Sidebar dark={dark} setDark={setDark} view={view} navigate={(v, g?: string) => { navigate(v as View, g); setSidebarOpen(false); }} selectedGroup={selectedGroup} monthData={monthData} groupOrder={activeGroupOrder} isAdmin={user.is_admin} />
         </div>
         {/* Mobile sidebar overlay */}
         {sidebarOpen && (
           <>
             <div className="sidebar-mobile-overlay" onClick={() => setSidebarOpen(false)} />
             <div className="sidebar-mobile">
-              <Sidebar dark={dark} setDark={setDark} view={view} navigate={(v: View, g?: string) => { navigate(v, g); setSidebarOpen(false); }} selectedGroup={selectedGroup} monthData={monthData} />
+              <Sidebar dark={dark} setDark={setDark} view={view} navigate={(v, g?: string) => { navigate(v as View, g); setSidebarOpen(false); }} selectedGroup={selectedGroup} monthData={monthData} groupOrder={activeGroupOrder} isAdmin={user.is_admin} />
             </div>
           </>
         )}
@@ -372,8 +416,11 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
                 <AdminPanel onBack={() => setView("dashboard")} />
               </div>
             )}
-            {loading && view !== "historysync" && view !== "cumulative" && view !== "admin" && <SkeletonLoader />}
-            {error && view !== "historysync" && view !== "cumulative" && view !== "admin" && (
+            {view === "mccmanager" && user.is_admin && (
+              <MccManager onAccountsChanged={loadDynamicAccounts} />
+            )}
+            {loading && view !== "historysync" && view !== "cumulative" && view !== "admin" && view !== "mccmanager" && <SkeletonLoader />}
+            {error && view !== "historysync" && view !== "cumulative" && view !== "admin" && view !== "mccmanager" && (
               <div className="flex items-center justify-center h-64 animate-fade-in">
                 <div className="text-center">
                   <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-3">
@@ -384,7 +431,7 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
                 </div>
               </div>
             )}
-            {!loading && !error && rawData.length === 0 && view !== "historysync" && view !== "cumulative" && view !== "admin" && (
+            {!loading && !error && rawData.length === 0 && view !== "historysync" && view !== "cumulative" && view !== "admin" && view !== "mccmanager" && (
               <div className="flex items-center justify-center h-64 animate-fade-in">
                 <div className="text-center">
                   <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
@@ -407,9 +454,9 @@ function AuthenticatedApp({ user, onLogout }: { user: User; onLogout: () => void
               }} />
             )}
             {view === "cumulative" && (
-              <CumulativeReport navigate={navigate} />
+              <CumulativeReport navigate={navigate} accountOverrides={dynamicAccounts ?? undefined} />
             )}
-            {!loading && !error && rawData.length > 0 && view !== "historysync" && view !== "cumulative" && view !== "admin" && (
+            {!loading && !error && rawData.length > 0 && view !== "historysync" && view !== "cumulative" && view !== "admin" && view !== "mccmanager" && (
               <>
                 {view === "dashboard" && <Dashboard monthData={monthData} prevMonthData={prevMonthData} navigate={navigate} />}
                 {view === "group" && <GroupView monthData={monthData} group={selectedGroup} navigate={navigate} updateOpsCost={updateOpsCost} />}
